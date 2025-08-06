@@ -1,0 +1,58 @@
+{
+  "news": [
+    {
+      "title": "ABDCED",
+      "content": "ABCEDED",
+      "editableDate": "2025-08-06",
+      "lastUpdated": "2025-08-05T19:04:36.669Z"
+    },
+    {
+      "title": "asdasd",
+      "content": "sadadasd",
+      "editableDate": "2025-08-07",
+      "lastUpdated": "2025-08-06T13:40:40.210Z"
+    }
+  ],
+  "faq": [
+    {
+      "title": "Untitled",
+      "content": "Dummy FAQ 1",
+      "editableDate": "2025-08-05",
+      "lastUpdated": "2025-08-05T18:52:41.839Z"
+    },
+    {
+      "title": "Untitled",
+      "content": "Dummy FAQ 2",
+      "editableDate": "2025-08-05",
+      "lastUpdated": "2025-08-05T18:52:41.839Z"
+    }
+  ],
+  "forms": [
+    {
+      "title": "Untitledasdasdadsad",
+      "content": "Dummy foadsadasdassrm 2",
+      "editableDate": "2025-08-05",
+      "lastUpdated": "2025-08-05T19:05:07.102Z"
+    },
+    {
+      "title": "Untitled",
+      "content": "Dummy form 1",
+      "editableDate": "2025-08-05",
+      "lastUpdated": "2025-08-05T18:52:41.839Z"
+    }
+  ],
+  "classes": [
+    {
+      "title": "a class",
+      "content": "this class teaches you things",
+      "editableDate": "2025-08-07",
+      "lastUpdated": "2025-08-06T14:05:11.969Z"
+    },
+    {
+      "title": "class b",
+      "content": "class b",
+      "editableDate": "2025-08-06",
+      "lastUpdated": "2025-08-06T14:40:31.160Z"
+    }
+  ]
+}
