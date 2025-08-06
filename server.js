@@ -1,21 +1,18 @@
-// Updated server.js with navbar, show/hide sections, 'classes' section added, theme updated to match screenshot (professional accounting look with navy blue, sage green, clean fonts)
-// Changes for new instructions:
-// - Changed company name to "J & T Accounting" (line 113)
-// - Updated navbar to full-width with 'container-fluid', mobile responsive (already Bootstrap) (line 111)
-// - Added bold, rounded text: Updated CSS with font-weight: 700 for headers/buttons, border-radius: 20px on buttons (lines 95-110 for main CSS, similar for login/dashboard)
-// - Buttons use Bootstrap with modified colors (already done, no change)
-// - Text contrast: White on dark (card-header, hero), black/#333 on light (body, etc.) (CSS updates in lines 95-110)
-// - Added small circular image placeholder under hero in home section (line 136: <img style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: 2rem auto;" src="https://via.placeholder.com/100" alt="Logo Placeholder">)
-// - Tailored messaging for "J & T Accounting" in home description (line 138)
-// - Fonts consistent (Open Sans), bold where appropriate (e.g., headers/buttons)
-// - Added real hero image URL for Utah mountains (line 100: background-image url updated to Pexels image)
-// - Added real circular photo URL for couple (line 137: src updated to Pexels stock photo of couple)
-// - Added CSP imgSrc for pexels.com (line 26)
-// - Cleanup: Ensured crisp look, same fonts, no major color changes
+// Updated server.js with recent additions:
+// - Added bold icons to dashboard buttons (bi-pencil, bi-check-circle, bi-x-circle, bi-trash; CSS .bi { font-weight: bold; })
+// - Added download link to forms cards on main page, with CAPTCHA modal (using reCAPTCHA v2; added script/CSP, modal HTML/JS in main page)
+// - Removed dummy data from forms in default data (line 60)
+// - Added form upload: Multer setup, /upload-form route, file input in forms add HTML, fetch FormData in addItem('forms'), 'filename' in forms data/migration
+// - Added /delete-file route for cleanup on remove
+// - Added app.use for serving /forms static
+// - Client-side addItem for forms uses FormData fetch
+// - Main forms cards have download button triggering CAPTCHA modal
+// - Placeholder reCAPTCHA site key (replace with real)
+// - CSP updated for reCAPTCHA (scriptSrc, frameSrc)
 // - No new files; all inline
 // - Hashed password uncommented with example (line 37); replace with yours
 // - Ensure .env with SESSION_SECRET
-// - Updated CSP to allow Bootstrap CDN (added https://cdn.jsdelivr.net to scriptSrc and styleSrc, line 22-23)
+// - Ensure 'uploads/forms' folder exists (mkdir -p uploads/forms)
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -24,6 +21,8 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 const helmet = require('helmet');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -33,15 +32,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://images.pexels.com", "https://via.placeholder.com"]
+      connectSrc: ["'self'", "https://www.google.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+      imgSrc: ["'self'", "data:", "https://images.pexels.com", "https://via.placeholder.com"],
+      frameSrc: ["'self'", "https://www.google.com/recaptcha/"]
     }
   }
 }));
-
 // Rate limiter: 5 attempts per minute per IP for login
 const rateLimiter = new RateLimiterMemory({
   points: 5, // 5 attempts
@@ -51,6 +51,28 @@ const rateLimiter = new RateLimiterMemory({
 // Hashed password (uncomment and replace with your hash from bcrypt.hashSync('abc123', 10))
 const hashedPassword = '$2b$10$PxRzRA6Y6nCSDZENL3flM.nptyXo/JyEbn6pkRQgYnwZucUdNGGUu';
 
+// Configure Multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/forms'); // Storage folder
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
+  }
+});
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') { // Limit to PDFs
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDFs allowed'));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+app.use('/forms', express.static('uploads/forms')); // Serve forms for download
+
 const dataFile = 'data.json';
 let data = {
   news: [
@@ -59,9 +81,7 @@ let data = {
   faq: [
     { title: 'Default FAQ Title', content: 'Default FAQ content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
   ],
-  forms: [
-    { title: 'Default Form Title', content: 'Default form content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
-  ],
+  forms: [], // Removed dummy data
   classes: [
     { title: 'Default Class Title', content: 'Default class content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
   ]
@@ -76,7 +96,8 @@ if (fs.existsSync(dataFile)) {
           title: 'Untitled',
           content: item.content || 'Default content',
           editableDate: item.editableDate || new Date().toISOString().split('T')[0],
-          lastUpdated: item.lastUpdated || new Date().toISOString()
+          lastUpdated: item.lastUpdated || new Date().toISOString(),
+          filename: item.filename || '' // Add filename if missing
         };
       }
       return item;
@@ -125,6 +146,7 @@ app.get('/', (req, res) => {
         .btn { border-radius: 20px; font-weight: 600; }
         h2 { font-weight: 700; color: #001f3f; }
       </style>
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     </head>
     <body>
       <nav class="navbar navbar-expand-lg navbar-dark">
@@ -206,6 +228,7 @@ app.get('/', (req, res) => {
                 <div class="card-body">
                   ${f.content}
                   <p class="mt-2 text-muted">Date: ${f.editableDate}</p>
+                  ${f.filename ? `<button onclick="showCaptchaModal('/forms/${f.filename}')" class="btn btn-primary btn-sm">Download Form</button>` : ''}
                 </div>
                 <div class="card-footer text-muted">
                   <small><i><strong>Last Updated: ${new Date(f.lastUpdated).toLocaleString()}</strong></i></small>
@@ -271,8 +294,42 @@ app.get('/', (req, res) => {
         <p>Placeholder for TaxDome section. Edit in dashboard if needed.</p>
       </div>
       
+      <!-- CAPTCHA Modal -->
+      <div class="modal fade" id="captchaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Verify CAPTCHA to Download</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="g-recaptcha" data-sitekey="6LdrqpwrAAAAAL1wc-uV_1Ie9W_q88EIqmcmAPx1" data-callback="onCaptchaSuccess"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
+        let downloadUrl = '';
+        function showCaptchaModal(url) {
+          downloadUrl = url;
+          var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
+          myModal.show();
+        }
+        function onCaptchaSuccess(token) {
+          fetch('/verify-captcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          }).then(response => {
+            if (response.ok) {
+              window.location.href = downloadUrl;
+            } else {
+              alert('CAPTCHA verification failed');
+            }
+          }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
+        }
         function showSection(sectionId) {
           document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
           document.getElementById(sectionId).classList.add('active');
@@ -370,6 +427,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         tbody tr:hover { cursor: grab; background-color: #e9ecef; }
         .editing input { width: 100%; }
         h1, h2 { color: #001f3f; font-weight: 700; }
+        .bi { font-weight: bold; font-size: 1.2rem; } // Bold icons
       </style>
     </head>
     <body class="container mt-4">
@@ -394,7 +452,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         <div class="col"><input id="news-content-add" class="form-control" placeholder="Content"></div>
         <div class="col"><input id="news-date-add" type="date" class="form-control"></div>
         <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success">+</button></div>
+        <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
       
       <!-- FAQ Section -->
@@ -416,7 +474,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         <div class="col"><input id="faq-content-add" class="form-control" placeholder="Content"></div>
         <div class="col"><input id="faq-date-add" type="date" class="form-control"></div>
         <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success">+</button></div>
+        <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
       
       <!-- Forms Section -->
@@ -437,8 +495,9 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         <div class="col"><input id="forms-title-add" class="form-control" placeholder="Title"></div>
         <div class="col"><input id="forms-content-add" class="form-control" placeholder="Content"></div>
         <div class="col"><input id="forms-date-add" type="date" class="form-control"></div>
+        <div class="col"><input id="forms-file-add" type="file" class="form-control"></div>
         <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success">+</button></div>
+        <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
       
       <!-- Classes Section -->
@@ -460,12 +519,12 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         <div class="col"><input id="classes-content-add" class="form-control" placeholder="Content"></div>
         <div class="col"><input id="classes-date-add" type="date" class="form-control"></div>
         <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success">+</button></div>
+        <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
       
-      <button onclick="saveData()" class="btn btn-primary mt-3">Save Changes</button>
-      <a href="/" class="btn btn-secondary mt-3">Go to Main</a>
-      <a href="/logout" class="btn btn-danger mt-3">Logout</a>
+      <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
+      <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
+      <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       
       <script>
         var initialData = ${JSON.stringify(data)};
@@ -487,7 +546,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
               <td>\${new Date(item.lastUpdated).toLocaleString()}</td>
               <td>
                 <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
-                <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-dash"></i></button>
+                <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
               </td>
             \`;
             tbody.appendChild(row);
@@ -555,9 +614,9 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
           // Date remains input
           // Last updated remains
           cells[4].innerHTML = \`
-            <button onclick="saveEdit(this)" class="btn btn-success btn-sm"><i class="bi bi-plus"></i></button>
-            <button onclick="cancelEdit(this)" class="btn btn-secondary btn-sm"><i class="bi bi-x"></i></button>
-            <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-dash"></i></button>
+            <button onclick="saveEdit(this)" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i></button>
+            <button onclick="cancelEdit(this)" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i></button>
+            <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
           \`;
           row.draggable = false; // Disable drag while editing
         }
@@ -592,6 +651,35 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         }
 
         function addItem(section) {
+          if (section === 'forms') {
+            var title = document.getElementById('forms-title-add').value.trim();
+            var content = document.getElementById('forms-content-add').value.trim();
+            var date = document.getElementById('forms-date-add').value;
+            var fileInput = document.getElementById('forms-file-add');
+            if (title && content && date && fileInput.files[0]) {
+              var formData = new FormData();
+              formData.append('title', title);
+              formData.append('content', content);
+              formData.append('editableDate', date);
+              formData.append('formFile', fileInput.files[0]);
+              fetch('/upload-form', {
+                method: 'POST',
+                body: formData
+              }).then(response => response.json()).then(newItem => {
+                localData.forms.push(newItem);
+                updateTable('forms');
+                document.getElementById('forms-title-add').value = '';
+                document.getElementById('forms-content-add').value = '';
+                document.getElementById('forms-date-add').value = '';
+                fileInput.value = '';
+              }).catch(err => alert('Error uploading form'));
+              return;
+            } else {
+              alert('All fields and file required for forms');
+              return;
+            }
+          }
+          // Original add for other sections
           var titleInput = document.getElementById(section + '-title-add');
           var contentInput = document.getElementById(section + '-content-add');
           var dateInput = document.getElementById(section + '-date-add');
@@ -610,8 +698,16 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         }
 
         function removeItem(section, index) {
+          const item = localData[section][index];
           localData[section].splice(index, 1);
           updateTable(section);
+          if (section === 'forms' && item.filename) {
+            fetch('/delete-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: item.filename })
+            });
+          }
         }
 
         function saveData() {
@@ -638,6 +734,42 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
     </html>
   `;
   res.send(html);
+});
+// Upload form endpoint
+app.post('/upload-form', isAuthenticated, upload.single('formFile'), (req, res) => {
+  const newItem = {
+    title: req.body.title,
+    content: req.body.content,
+    editableDate: req.body.editableDate,
+    lastUpdated: new Date().toISOString(),
+    filename: req.file.filename
+  };
+  data.forms.push(newItem);
+  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+  res.json(newItem);
+});
+// Delete file endpoint
+app.post('/delete-file', isAuthenticated, (req, res) => {
+  const { filename } = req.body;
+  const filePath = path.join(__dirname, 'uploads/forms', filename);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+  res.send('OK');
+});
+// Verify CAPTCHA endpoint (client sends token, server verifies)
+app.post('/verify-captcha', (req, res) => {
+  const token = req.body.token;
+  const secret = '6LdrqpwrAAAAALl15L_kXI60l8IvkPgTlZtAOh_3'; // Replace with your secret key
+  fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        res.send('OK');
+      } else {
+        res.status(400).send('CAPTCHA failed');
+      }
+    });
 });
 // Save endpoint
 app.post('/save', isAuthenticated, (req, res) => {
