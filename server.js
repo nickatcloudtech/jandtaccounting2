@@ -737,17 +737,23 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
 });
 // Upload form endpoint
 app.post('/upload-form', isAuthenticated, upload.single('formFile'), (req, res) => {
-  const newItem = {
-    title: req.body.title,
-    content: req.body.content,
-    editableDate: req.body.editableDate,
-    lastUpdated: new Date().toISOString(),
-    filename: req.file.filename
-  };
-  data.forms.push(newItem);
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-  res.json(newItem);
+  try {
+    const newItem = {
+      title: req.body.title,
+      content: req.body.content,
+      editableDate: req.body.editableDate,
+      lastUpdated: new Date().toISOString(),
+      filename: req.file.filename
+    };
+    data.forms.push(newItem);
+    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+    res.json(newItem);
+  } catch (err) {
+    console.error(err); // Log error for debugging
+    res.status(500).send('Upload failed: ' + err.message); // Send user-friendly error
+  }
 });
+
 // Delete file endpoint
 app.post('/delete-file', isAuthenticated, (req, res) => {
   const { filename } = req.body;
