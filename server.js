@@ -69,7 +69,7 @@ const upload = multer({
       cb(new Error('Only PDFs allowed'));
     }
   },
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 app.use('/forms', express.static('uploads/forms')); // Serve forms for download
 
@@ -125,11 +125,13 @@ app.get('/', (req, res) => {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Main Website</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
         body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
+	body { padding-top: 70px; } 
         .navbar { background-color: #001f3f; }
         .navbar-brand { color: #ffd700; font-weight: 700; font-size: 1.5rem; }
         .nav-link { color: white; font-weight: 600; }
@@ -145,11 +147,25 @@ app.get('/', (req, res) => {
         .section.active { display: block; }
         .btn { border-radius: 20px; font-weight: 600; }
         h2 { font-weight: 700; color: #001f3f; }
+	@media (max-width: 576px) {
+	  .card-body { padding: 1rem; font-size: 1rem; }
+	  .hero h1 { font-size: 2rem; }
+	  .description { font-size: 1rem; padding: 1rem 0; }
+	  .btn { font-size: 1rem; }
+	}
+	@media (max-width: 991px) {
+	  .navbar-collapse {
+	    position: relative;
+	    height: auto !important;
+	    background-color: #001f3f; /* Matches navbar bg for consistency */
+	  }
+	}
+
       </style>
       <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     </head>
     <body>
-      <nav class="navbar navbar-expand-lg navbar-dark">
+      <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container-fluid">
           <a class="navbar-brand" href="#">J & T Accounting</a>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -231,7 +247,7 @@ app.get('/', (req, res) => {
                   ${f.filename ? `<button onclick="showCaptchaModal('/forms/${f.filename}')" class="btn btn-primary btn-sm">Download Form</button>` : ''}
                 </div>
                 <div class="card-footer text-muted">
-                  <small><i><strong>Last Updated: ${new Date(f.lastUpdated).toLocaleString()}</strong></i></small>
+                  <small><i><strong>Last Updated: ${new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</strong></i></small>
                 </div>
               </div>
             </div>
@@ -251,7 +267,7 @@ app.get('/', (req, res) => {
                   <p class="mt-2 text-muted">Date: ${n.editableDate}</p>
                 </div>
                 <div class="card-footer text-muted">
-                  <small><i><strong>Last Updated: ${new Date(n.lastUpdated).toLocaleString()}</strong></i></small>
+                  <small><i><strong>Last Updated: ${new Date(n.lastUpdated).toUTCString()}</strong></i></small>
                 </div>
               </div>
             </div>
@@ -330,10 +346,15 @@ app.get('/', (req, res) => {
             }
           }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
         }
-        function showSection(sectionId) {
-          document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-          document.getElementById(sectionId).classList.add('active');
-        }
+       function showSection(sectionId) {
+	  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+	  document.getElementById(sectionId).classList.add('active');
+	  // New: Close navbar collapse on mobile after click
+	  const collapse = document.querySelector('.navbar-collapse');
+	  if (collapse.classList.contains('show')) {
+	    new bootstrap.Collapse(collapse).hide();
+	  }
+	}
         // Show home by default
         showSection('home');
       </script>
@@ -349,6 +370,7 @@ app.get('/schwertfisch', (req, res) => {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Login</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -413,12 +435,13 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">      
       <title>Dashboard</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
+	body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
         .table { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .btn-success { background-color: #8fb98b; border-color: #8fb98b; border-radius: 20px; font-weight: 600; color: white; }
         .btn-primary { background-color: #001f3f; border-color: #001f3f; border-radius: 20px; font-weight: 600; color: white; }
@@ -428,6 +451,11 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         .editing input { width: 100%; }
         h1, h2 { color: #001f3f; font-weight: 700; }
         .bi { font-weight: bold; font-size: 1.2rem; } // Bold icons
+	@media (max-width: 576px) {
+	  .form-control { font-size: 1rem; }
+	  .btn-sm { font-size: 0.875rem; }
+	  h2 { font-size: 1.5rem; }
+	}
       </style>
     </head>
     <body class="container mt-4">
@@ -435,7 +463,8 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
       
       <!-- News Section -->
       <h2>News</h2>
-      <table id="news-table" class="table table-striped">
+      <div class="table-responsive">
+	<table id="news-table" class="table table-striped">
         <thead>
           <tr>
             <th>Title</th>
@@ -447,6 +476,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         </thead>
         <tbody id="news-tbody"></tbody>
       </table>
+      </div>
       <div class="row mb-3">
         <div class="col"><input id="news-title-add" class="form-control" placeholder="Title"></div>
         <div class="col"><input id="news-content-add" class="form-control" placeholder="Content"></div>
@@ -457,7 +487,8 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
       
       <!-- FAQ Section -->
       <h2>FAQ</h2>
-      <table id="faq-table" class="table table-striped">
+      <div class="table-responsive">
+	<table id="faq-table" class="table table-striped">
         <thead>
           <tr>
             <th>Title</th>
@@ -469,6 +500,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         </thead>
         <tbody id="faq-tbody"></tbody>
       </table>
+      </div>
       <div class="row mb-3">
         <div class="col"><input id="faq-title-add" class="form-control" placeholder="Title"></div>
         <div class="col"><input id="faq-content-add" class="form-control" placeholder="Content"></div>
@@ -479,7 +511,8 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
       
       <!-- Forms Section -->
       <h2>Forms</h2>
-      <table id="forms-table" class="table table-striped">
+      <div class="table-responsive">	 
+       <table id="forms-table" class="table table-striped">
         <thead>
           <tr>
             <th>Title</th>
@@ -491,6 +524,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         </thead>
         <tbody id="forms-tbody"></tbody>
       </table>
+      </div>
       <div class="row mb-3">
         <div class="col"><input id="forms-title-add" class="form-control" placeholder="Title"></div>
         <div class="col"><input id="forms-content-add" class="form-control" placeholder="Content"></div>
@@ -502,7 +536,8 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
       
       <!-- Classes Section -->
       <h2>Classes</h2>
-      <table id="classes-table" class="table table-striped">
+      <div class="table-responsive">
+	<table id="classes-table" class="table table-striped">
         <thead>
           <tr>
             <th>Title</th>
@@ -514,6 +549,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
         </thead>
         <tbody id="classes-tbody"></tbody>
       </table>
+      </div>
       <div class="row mb-3">
         <div class="col"><input id="classes-title-add" class="form-control" placeholder="Title"></div>
         <div class="col"><input id="classes-content-add" class="form-control" placeholder="Content"></div>
@@ -543,7 +579,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
               <td>\${item.title}</td>
               <td>\${item.content}</td>
               <td><input type="date" value="\${item.editableDate}" onchange="updateDate('\${section}', \${index}, this.value)"></td>
-              <td>\${new Date(item.lastUpdated).toLocaleString()}</td>
+	      <td>\${new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</td>
               <td>
                 <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
                 <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
