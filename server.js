@@ -60,6 +60,7 @@ app.use('/forms', (req, res, next) => {
     res.status(403).send('Verification required');
   }
 });
+app.use('/images', express.static('images'));
 const dataFile = 'data.json';
 let data = {
   news: [
@@ -71,30 +72,34 @@ let data = {
   forms: [], // Removed dummy data
   classes: [
     { title: 'Default Class Title', content: 'Default class content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
-  ]
+  ],
+  alert: { title: '', content: '', color: 'yellow', active: false }
 };
 if (fs.existsSync(dataFile)) {
   let loadedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
   // Migrate if old format (no title)
   Object.keys(loadedData).forEach(key => {
-    loadedData[key] = loadedData[key].map(item => {
-      if (!item.title) {
-        return {
-          title: 'Untitled',
-          content: item.content || 'Default content',
-          editableDate: item.editableDate || new Date().toISOString().split('T')[0],
-          lastUpdated: item.lastUpdated || new Date().toISOString(),
-          filename: item.filename || '' // Add filename if missing
-        };
-      }
-      return item;
-    });
+    if (key !== 'alert') {
+      loadedData[key] = loadedData[key].map(item => {
+        if (!item.title) {
+          return {
+            title: 'Untitled',
+            content: item.content || 'Default content',
+            editableDate: item.editableDate || new Date().toISOString().split('T')[0],
+            lastUpdated: item.lastUpdated || new Date().toISOString(),
+            filename: item.filename || '' // Add filename if missing
+          };
+        }
+        return item;
+      });
+    }
   });
   data = loadedData;
   if (!data.news) data.news = [];
   if (!data.faq) data.faq = [];
   if (!data.forms) data.forms = [];
   if (!data.classes) data.classes = [];
+  if (!data.alert) data.alert = { title: '', content: '', color: 'yellow', active: false };
 } else {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 }
@@ -120,11 +125,26 @@ app.get('/', (req, res) => {
       <style>
         body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
 body { padding-top: 70px; }
-        .navbar { background-color: #001f3f; }
+       .navbar { background-color: #001f3f; }
         .navbar-brand { color: #ffd700; font-weight: 700; font-size: 1.5rem; }
         .nav-link { color: white; font-weight: 600; }
         .btn-contact { background-color: #ffd700; border-color: #ffd700; color: #001f3f; border-radius: 20px; font-weight: 600; }
-        .hero { background-color: #e9ecef; padding: 4rem 0; text-align: center; color: #fff; background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.pexels.com/photos/2356045/pexels-photo-2356045.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'); background-size: cover; }
+.hero {
+    /* Existing styles */
+    padding: 6rem 0; /* Increased padding by 50% from 4rem to 6rem for height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/images/ranch.jpg');
+ }
+ .hero-logo {
+    /* Remove absolute positioning */
+    position: static;
+    width: 300px; /* Adjusted width for centering; adjust as needed */
+    height: auto;
+    margin-bottom: 1rem; /* Space below logo for the title */
+ }
         .hero h1 { font-size: 3rem; font-weight: 700; }
         .description { text-align: center; padding: 2rem 0; color: #6c757d; font-size: 1.1rem; }
         .icons { text-align: center; padding: 2rem 0; }
@@ -154,7 +174,7 @@ body { padding-top: 70px; }
     <body>
       <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container-fluid">
-          <a class="navbar-brand" href="#">J & T Accounting</a>
+          <a class="navbar-brand" href="#"><img src="/images/AccountingServices-R2.png" alt="Logo" style="height: 40px; margin-right: 10px;">J & T Accounting</a>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
@@ -170,17 +190,19 @@ body { padding-top: 70px; }
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('contact')">Contact</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('irs')">IRS</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('taxdome')">TaxDome</a></li>
-              <li class="nav-item"><button class="btn btn-contact ms-2">Free Consultation</button></li>
+              <li class="nav-item"><button class="btn btn-contact ms-2" onclick="showSection('contact')">Free Consultation</button></li>
             </ul>
           </div>
         </div>
       </nav>
-     
+    
       <div id="home" class="section active container mt-4">
-        <div class="hero">
-          <h1>Supporting you & your growing business.</h1>
-        </div>
-        <img style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: 2rem auto;" src="https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Team Photo">
+ <div class="hero">
+  <img src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
+  <h1 style="color: white; font-weight: 700; font-size: 3rem; margin: 0 0 0.5rem 0; text-align: center;">J&T Accounting Services</h1>
+  <h2 style="color: white; font-weight: 400; font-size: 1.5rem; margin: 0; text-align: center;">Supporting you & your growing business.</h2>
+</div>
+        <img style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: 2rem auto;" src="/images/US.jpg" alt="Team Photo">
         <div class="description">
           J & T Accounting provides financial guidance for businesses through planning and ongoing advisement. We also support individuals with personal accounting and tax needs. Our approach is focused on establishing relationships with our clients, so we have a vested interest in helping them achieve their strategic goals.
         </div>
@@ -189,18 +211,57 @@ body { padding-top: 70px; }
           <i class="bi bi-file-earmark-text-fill icon"></i>
           <i class="bi bi-graph-up-arrow icon"></i>
         </div>
+        ${data.alert.active ? `<div class="alert alert-${data.alert.color === 'yellow' ? 'warning' : 'danger'} mb-4" role="alert">
+          <strong>${data.alert.title}</strong> ${data.alert.content}
+        </div>` : ''}
+        <div class="text-center mb-4">
+          <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
+        </div>
       </div>
-     
+    
       <div id="about" class="section container mt-4">
         <h2>About</h2>
         <p>Placeholder for About section. Edit in dashboard if needed.</p>
       </div>
-     
+    
       <div id="services" class="section container mt-4">
         <h2>Services</h2>
-        <p>Placeholder for Services section. Edit in dashboard if needed.</p>
+        <div class="row">
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card">
+              <div class="card-header"><strong>Accounting</strong></div>
+              <div class="card-body">
+                An accountant is NOT a tax preparer and a tax preparer is NOT an accountant. Fortunately for you, we are both accountants and tax preparers. This is extremely rare. An accountant’s job is to organize all money in and out into the correct categories which in the end needs to balance. Every penny needs to be accounted for and that is what we do. Accounting must be completed before a business tax return can be started. We are QBO (QuickBooks Online) Pro Advisors and can help you set up an account and assist you throughout the year.
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card">
+              <div class="card-header"><strong>Taxes</strong></div>
+              <div class="card-body">
+                We prepare and file federal and state tax returns for C Corps, S Corps, Partnerships, Estates and Trusts and individuals. We have legal authority to file in all 50 states and represent tax payers if the need arises. An LLC is either a C Corp, S Corp, Partnership or Sole Proprietorship. It’s very important to know which you have as the filing requirements are very different.
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card">
+              <div class="card-header"><strong>Business Start-Up</strong></div>
+              <div class="card-body">
+                Should I start a business? Am I cut out for it? There are big pros and cons to doing this. You must evaluate your personal strengths, weaknesses and family life. If you decide to start a business…. what entity do I choose? Before deciding this PLEASE consult a professional. This is NOT something you can decide watching YouTube or other social media. The internet often leads people to the wrong decision. We will carefully evaluate your situation and advise on the pros and cons of each. Once the decision is made, we will help you set up the entity and guide you through the proper operation.
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card">
+              <div class="card-header"><strong>Business Consulting</strong></div>
+              <div class="card-body">
+                As a business owner sometimes, you feel alone. This is where we come in. We help analyze your business, help you make monetary decisions and help you propel forward so you can become successful. We get that you can’t talk to your employees or your family because they don’t understand or don’t have the knowledge or honestly may just have their own agenda.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-     
+    
       <div id="classes" class="section container mt-4">
         <h2>Classes</h2>
         <div class="row">
@@ -220,7 +281,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-     
+    
       <div id="forms" class="section container mt-4">
         <h2>Forms</h2>
         <div class="row">
@@ -241,7 +302,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-     
+    
       <div id="news" class="section container mt-4">
         <h2>News</h2>
         <div class="row">
@@ -261,7 +322,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-     
+    
       <div id="faq" class="section container mt-4">
         <h2>FAQ</h2>
         <div class="row">
@@ -281,22 +342,22 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-     
+    
       <div id="contact" class="section container mt-4">
         <h2>Contact</h2>
         <p>Placeholder for Contact section. Edit in dashboard if needed.</p>
       </div>
-     
+    
       <div id="irs" class="section container mt-4">
         <h2>IRS</h2>
         <p>Placeholder for IRS section. Edit in dashboard if needed.</p>
       </div>
-     
+    
       <div id="taxdome" class="section container mt-4">
         <h2>TaxDome</h2>
         <p>Placeholder for TaxDome section. Edit in dashboard if needed.</p>
       </div>
-     
+    
       <!-- CAPTCHA Modal -->
       <div class="modal fade" id="captchaModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -311,7 +372,7 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
-     
+    
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         let downloadUrl = '';
@@ -459,7 +520,35 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
     </head>
     <body class="container mt-4">
       <h1>Dashboard</h1>
-     
+    
+      <!-- Home Page Alert Section -->
+      <h2>Home Page Alert</h2>
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="form-group mb-3">
+            <label for="alert-title">Title</label>
+            <input type="text" id="alert-title" class="form-control" value="${data.alert.title}">
+          </div>
+          <div class="form-group mb-3">
+            <label for="alert-content">Content</label>
+            <input type="text" id="alert-content" class="form-control" value="${data.alert.content}">
+          </div>
+          <div class="form-group mb-3">
+            <label for="alert-color">Color</label>
+            <select id="alert-color" class="form-control">
+              <option value="yellow" ${data.alert.color === 'yellow' ? 'selected' : ''}>Yellow (Warning)</option>
+              <option value="red" ${data.alert.color === 'red' ? 'selected' : ''}>Red (Danger)</option>
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label for="alert-active">Active</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="alert-active" ${data.alert.active ? 'checked' : ''}>
+            </div>
+          </div>
+        </div>
+      </div>
+    
       <!-- News Section -->
       <h2>News</h2>
       <div class="table-responsive">
@@ -483,7 +572,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-     
+    
       <!-- FAQ Section -->
       <h2>FAQ</h2>
       <div class="table-responsive">
@@ -507,7 +596,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-     
+    
       <!-- Forms Section -->
       <h2>Forms<span class="ms-2" data-bs-toggle="tooltip" data-bs-title="Supports PDF and Excel (.xls, .xlsx) files"><i class="bi bi-question-circle" style="font-size: 0.8rem; color: black;"></i></span></h2>
       <div class="table-responsive">
@@ -532,7 +621,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-     
+    
       <!-- Classes Section -->
       <h2>Classes</h2>
       <div class="table-responsive">
@@ -556,11 +645,11 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-     
+    
       <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
       <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
       <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
-     
+    
       <script>
         var initialData = ${JSON.stringify(data)};
         var localData = JSON.parse(JSON.stringify(initialData));
@@ -733,6 +822,12 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           }
         }
         function saveData() {
+          localData.alert = {
+            title: document.getElementById('alert-title').value.trim(),
+            content: document.getElementById('alert-content').value.trim(),
+            color: document.getElementById('alert-color').value,
+            active: document.getElementById('alert-active').checked
+          };
           fetch('/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

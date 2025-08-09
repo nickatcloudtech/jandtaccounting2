@@ -69,5 +69,11 @@
       "editableDate": "2025-08-06",
       "lastUpdated": "2025-08-06T14:40:31.160Z"
     }
-  ]
+  ],
+  "alert": {
+    "title": "abc",
+    "content": "abc",
+    "color": "red",
+    "active": true
+  }
 }
