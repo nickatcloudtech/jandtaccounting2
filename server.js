@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const multer = require('multer');
 const path = require('path');
+const nodemailer = require('nodemailer');
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -119,14 +120,14 @@ app.get('/', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Main Website</title>
+      <title>J&T Accounting</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
         body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
 body { padding-top: 70px; }
        .navbar { background-color: #001f3f; }
-        .navbar-brand { color: #ffd700; font-weight: 700; font-size: 1.5rem; }
+        .navbar-brand { color: white; font-weight: 700; font-size: 1.5rem; }
         .nav-link { color: white; font-weight: 600; }
         .btn-contact { background-color: #ffd700; border-color: #ffd700; color: #001f3f; border-radius: 20px; font-weight: 600; }
 .hero {
@@ -189,13 +190,13 @@ body { padding-top: 70px; }
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('faq')">FAQ</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('contact')">Contact</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('irs')">IRS</a></li>
-              <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('taxdome')">TaxDome</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('existingclients')">Existing Clients</a></li>
               <li class="nav-item"><button class="btn btn-contact ms-2" onclick="showSection('contact')">Free Consultation</button></li>
             </ul>
           </div>
         </div>
       </nav>
-    
+  
       <div id="home" class="section active container mt-4">
  <div class="hero">
   <img src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
@@ -212,18 +213,20 @@ body { padding-top: 70px; }
           <i class="bi bi-graph-up-arrow icon"></i>
         </div>
         ${data.alert.active ? `<div class="alert alert-${data.alert.color === 'yellow' ? 'warning' : 'danger'} mb-4" role="alert">
-          <strong>${data.alert.title}</strong> ${data.alert.content}
+          <h4 class="alert-heading">${data.alert.title}</h4>
+          <hr>
+          <p>${data.alert.content}</p>
         </div>` : ''}
         <div class="text-center mb-4">
           <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
       </div>
-    
+  
       <div id="about" class="section container mt-4">
         <h2>About</h2>
         <p>Placeholder for About section. Edit in dashboard if needed.</p>
       </div>
-    
+  
       <div id="services" class="section container mt-4">
         <h2>Services</h2>
         <div class="row">
@@ -261,7 +264,7 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
-    
+  
       <div id="classes" class="section container mt-4">
         <h2>Classes</h2>
         <div class="row">
@@ -281,7 +284,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-    
+  
       <div id="forms" class="section container mt-4">
         <h2>Forms</h2>
         <div class="row">
@@ -302,7 +305,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-    
+  
       <div id="news" class="section container mt-4">
         <h2>News</h2>
         <div class="row">
@@ -322,7 +325,7 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-    
+  
       <div id="faq" class="section container mt-4">
         <h2>FAQ</h2>
         <div class="row">
@@ -342,22 +345,56 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-    
+  
       <div id="contact" class="section container mt-4">
-        <h2>Contact</h2>
-        <p>Placeholder for Contact section. Edit in dashboard if needed.</p>
+        <h2>Contact Us</h2>
+        <p>See how our accounting expertise and personalized services can save you time, money, and frustration with managing your finances.  We offer both free introductary consultations and fee based analysis and on going advice.</p>
+        <p>Please call or use the form below to set up an appointment.</p>
+        <p>Mailing Address</p>
+        <p>HC 74 Box 5110</p>
+        <p>Adamsville, UT 84731-5116</p>
+        <p>Please call for a consult or virtual appointment</p>
+        <p>help@jandtaccounting.com</p>
+        <p>951-409-3081</p>
+        <form id="contact-form">
+          <div class="mb-3">
+            <label for="firstName" class="form-label">First Name (Required)</label>
+            <input type="text" class="form-control" id="firstName" name="firstName" required>
+          </div>
+          <div class="mb-3">
+            <label for="lastName" class="form-label">Last Name (Required)</label>
+            <input type="text" class="form-control" id="lastName" name="lastName" required>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email Address (Required)</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="phone" class="form-label">Phone Number (Required)</label>
+            <input type="tel" class="form-control" id="phone" name="phone" required>
+          </div>
+          <div class="mb-3">
+            <label for="message" class="form-label">How Can We Help You?</label>
+            <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
       </div>
-    
+  
       <div id="irs" class="section container mt-4">
         <h2>IRS</h2>
-        <p>Placeholder for IRS section. Edit in dashboard if needed.</p>
+        <p>IRS Website: <a href="https://www.irs.gov">https://www.irs.gov/</a></p>
       </div>
-    
-      <div id="taxdome" class="section container mt-4">
-        <h2>TaxDome</h2>
-        <p>Placeholder for TaxDome section. Edit in dashboard if needed.</p>
+  
+      <div id="existingclients" class="section container mt-4">
+        <h2>Existing Clients</h2>
+        <p>Thanks for being a loyal customer.</p>
+        <p>Mailing Address: HC 74 Box 5110, Adamsville, UT 84731-5116</p>
+        <p>Email: <a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></p>
+        <p>Phone: 951-409-3081</p>
+        <p><a href="https://your-taxdome-url.com" target="_blank">Access Your TaxDome Site (Placeholder)</a></p>
       </div>
-    
+  
       <!-- CAPTCHA Modal -->
       <div class="modal fade" id="captchaModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -372,36 +409,44 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
-    
+  
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         let downloadUrl = '';
-        function attemptDownload(url) {
-          fetch('/check-verified')
-            .then(response => response.json())
-            .then(data => {
-              if (data.verified) {
-                window.location.href = url;
-              } else {
-                downloadUrl = url;
-                var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
-                myModal.show();
-              }
-            });
-        }
-        function onCaptchaSuccess(token) {
-          fetch('/verify-captcha', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token })
-          }).then(response => {
-            if (response.ok) {
-              window.location.href = downloadUrl;
-            } else {
-              alert('CAPTCHA verification failed');
-            }
-          }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
-        }
+let pendingAction = null;  // Global variable to hold action after CAPTCHA
+
+// Update onCaptchaSuccess to be generic
+function onCaptchaSuccess(token) {
+  fetch('/verify-captcha', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  }).then(response => {
+    if (response.ok) {
+      if (pendingAction) {
+        pendingAction();  // Execute the pending action (download or form submit)
+        pendingAction = null;
+      }
+    } else {
+      alert('CAPTCHA verification failed');
+    }
+  }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
+}
+
+// Update attemptDownload (for existing downloads, if not already using pendingAction)
+function attemptDownload(url) {
+  fetch('/check-verified')
+    .then(response => response.json())
+    .then(data => {
+      if (data.verified) {
+        window.location.href = url;
+      } else {
+        pendingAction = () => window.location.href = url;
+        var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
+        myModal.show();
+      }
+    });
+}
        function showSection(sectionId) {
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
   document.getElementById(sectionId).classList.add('active');
@@ -417,6 +462,34 @@ body { padding-top: 70px; }
           const date = new Date(span.dataset.iso);
           span.textContent = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
         });
+       document.getElementById('contact-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  fetch('/check-verified')
+    .then(response => response.json())
+    .then(data => {
+      if (data.verified) {
+        submitForm(formData, e);  // Proceed if already verified
+      } else {
+        pendingAction = () => submitForm(formData, e);  // Set pending action
+        var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
+        myModal.show();
+      }
+    });
+});
+
+// Helper function to submit form
+async function submitForm(formData, e) {
+  const response = await fetch('/send-contact', { method: 'POST', body: formData });
+  if (response.ok) {
+    alert('Message sent!');
+    e.target.reset();
+  } else {
+    const errorText = await response.text();
+    console.error('Form submission error:', errorText);
+    alert('Error sending message: ' + errorText);
+  }
+}
       </script>
     </body>
     </html>
@@ -520,7 +593,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
     </head>
     <body class="container mt-4">
       <h1>Dashboard</h1>
-    
+  
       <!-- Home Page Alert Section -->
       <h2>Home Page Alert</h2>
       <div class="card mb-4">
@@ -548,7 +621,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           </div>
         </div>
       </div>
-    
+  
       <!-- News Section -->
       <h2>News</h2>
       <div class="table-responsive">
@@ -572,7 +645,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-    
+  
       <!-- FAQ Section -->
       <h2>FAQ</h2>
       <div class="table-responsive">
@@ -596,7 +669,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-    
+  
       <!-- Forms Section -->
       <h2>Forms<span class="ms-2" data-bs-toggle="tooltip" data-bs-title="Supports PDF and Excel (.xls, .xlsx) files"><i class="bi bi-question-circle" style="font-size: 0.8rem; color: black;"></i></span></h2>
       <div class="table-responsive">
@@ -621,7 +694,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-    
+  
       <!-- Classes Section -->
       <h2>Classes</h2>
       <div class="table-responsive">
@@ -645,11 +718,11 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-    
+  
       <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
       <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
       <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
-    
+  
       <script>
         var initialData = ${JSON.stringify(data)};
         var localData = JSON.parse(JSON.stringify(initialData));
@@ -904,6 +977,43 @@ app.post('/verify-captcha', (req, res) => {
         res.status(400).send('CAPTCHA failed');
       }
     });
+});
+// Send contact email
+app.post('/send-contact', upload.none(), async (req, res) => {
+  if (!req.session.captchaVerified && !req.session.authenticated) {
+    return res.status(403).send('Verification required');
+  }
+  console.log('Received form data:', req.body); // Should now show populated data
+  const { firstName, lastName, email, phone, message } = req.body;
+  if (!firstName || !lastName || !email || !phone) {
+    console.log('Missing fields:', { firstName, lastName, email, phone });
+    return res.status(400).send('Required fields missing');
+  }
+  let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+  let mailOptions = {
+    from: email,
+    to: 'help@jandtaccounting.com',
+    subject: 'J&T Website Form Submission',
+    text: `Name: ${firstName} ${lastName}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message || 'No message provided'}`,
+    html: `<p><strong>Name:</strong> ${firstName} ${lastName}</p>
+           <p><strong>Email:</strong> ${email}</p>
+           <p><strong>Phone:</strong> ${phone}</p>
+           <p><strong>Message:</strong> ${message || 'No message provided'}</p>`
+  };
+  try {
+    let info = await transporter.sendMail(mailOptions);
+    console.log('Email sent: ' + info.response);
+    res.send('OK');
+  } catch (err) {
+    console.error('Error sending email: ', err);
+    res.status(500).send('Error sending email');
+  }
 });
 // Save endpoint
 app.post('/save', isAuthenticated, (req, res) => {

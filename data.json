@@ -71,9 +71,9 @@
     }
   ],
   "alert": {
-    "title": "abc",
-    "content": "abc",
-    "color": "red",
+    "title": "TAXES DUE SOON",
+    "content": "Taxes are due soon.",
+    "color": "yellow",
     "active": true
   }
 }
