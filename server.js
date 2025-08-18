@@ -328,16 +328,18 @@ body { padding-top: 70px; }
   
       <div id="faq" class="section container mt-4">
         <h2>FAQ</h2>
-        <div class="row">
-          ${data.faq ? data.faq.map(f => `
-            <div class="col-12 mb-3">
-              <div class="card">
-                <div class="card-header"><strong>${f.title}</strong></div>
-                <div class="card-body">
+        <div class="accordion" id="faqAccordion">
+          ${data.faq ? data.faq.map((f, index) => `
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="heading${index}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
+                  ${f.title}
+                </button>
+              </h2>
+              <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
                   ${f.content}
                   <p class="mt-2 text-muted">Date: ${f.editableDate}</p>
-                </div>
-                <div class="card-footer text-muted">
                   <small><i><strong>Last Updated: <span class="local-datetime" data-iso="${f.lastUpdated}">${formatter.format(new Date(f.lastUpdated))}</span></strong></i></small>
                 </div>
               </div>
@@ -413,40 +415,32 @@ body { padding-top: 70px; }
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         let downloadUrl = '';
-let pendingAction = null;  // Global variable to hold action after CAPTCHA
-
-// Update onCaptchaSuccess to be generic
-function onCaptchaSuccess(token) {
-  fetch('/verify-captcha', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token })
-  }).then(response => {
-    if (response.ok) {
-      if (pendingAction) {
-        pendingAction();  // Execute the pending action (download or form submit)
-        pendingAction = null;
-      }
-    } else {
-      alert('CAPTCHA verification failed');
-    }
-  }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
-}
-
-// Update attemptDownload (for existing downloads, if not already using pendingAction)
-function attemptDownload(url) {
-  fetch('/check-verified')
-    .then(response => response.json())
-    .then(data => {
-      if (data.verified) {
-        window.location.href = url;
-      } else {
-        pendingAction = () => window.location.href = url;
-        var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
-        myModal.show();
-      }
-    });
-}
+        function attemptDownload(url) {
+          fetch('/check-verified')
+            .then(response => response.json())
+            .then(data => {
+              if (data.verified) {
+                window.location.href = url;
+              } else {
+                downloadUrl = url;
+                var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
+                myModal.show();
+              }
+            });
+        }
+        function onCaptchaSuccess(token) {
+          fetch('/verify-captcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          }).then(response => {
+            if (response.ok) {
+              window.location.href = downloadUrl;
+            } else {
+              alert('CAPTCHA verification failed');
+            }
+          }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
+        }
        function showSection(sectionId) {
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
   document.getElementById(sectionId).classList.add('active');
@@ -465,31 +459,16 @@ function attemptDownload(url) {
        document.getElementById('contact-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const formData = new FormData(e.target);
-  fetch('/check-verified')
-    .then(response => response.json())
-    .then(data => {
-      if (data.verified) {
-        submitForm(formData, e);  // Proceed if already verified
-      } else {
-        pendingAction = () => submitForm(formData, e);  // Set pending action
-        var myModal = new bootstrap.Modal(document.getElementById('captchaModal'));
-        myModal.show();
-      }
-    });
-});
-
-// Helper function to submit form
-async function submitForm(formData, e) {
   const response = await fetch('/send-contact', { method: 'POST', body: formData });
   if (response.ok) {
     alert('Message sent!');
     e.target.reset();
   } else {
-    const errorText = await response.text();
-    console.error('Form submission error:', errorText);
-    alert('Error sending message: ' + errorText);
+    const errorText = await response.text(); // Get the server's error message
+    console.error('Form submission error:', errorText); // Log to browser console for debugging
+    alert('Error sending message: ' + errorText); // Show detailed alert (using single quotes as you tried)
   }
-}
+});
       </script>
     </body>
     </html>
@@ -980,9 +959,6 @@ app.post('/verify-captcha', (req, res) => {
 });
 // Send contact email
 app.post('/send-contact', upload.none(), async (req, res) => {
-  if (!req.session.captchaVerified && !req.session.authenticated) {
-    return res.status(403).send('Verification required');
-  }
   console.log('Received form data:', req.body); // Should now show populated data
   const { firstName, lastName, email, phone, message } = req.body;
   if (!firstName || !lastName || !email || !phone) {
@@ -999,7 +975,7 @@ app.post('/send-contact', upload.none(), async (req, res) => {
   let mailOptions = {
     from: email,
     to: 'help@jandtaccounting.com',
-    subject: 'J&T Website Form Submission',
+    subject: `Contact from ${firstName} ${lastName}`,
     text: `Name: ${firstName} ${lastName}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message || 'No message provided'}`,
     html: `<p><strong>Name:</strong> ${firstName} ${lastName}</p>
            <p><strong>Email:</strong> ${email}</p>
@@ -1029,3 +1005,4 @@ app.get('/logout', (req, res) => {
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
+
