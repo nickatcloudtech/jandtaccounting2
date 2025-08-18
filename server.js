@@ -74,7 +74,7 @@ let data = {
   classes: [
     { title: 'Default Class Title', content: 'Default class content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
   ],
-  alert: { title: '', content: '', color: 'yellow', active: false }
+  alert: { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true }
 };
 if (fs.existsSync(dataFile)) {
   let loadedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
@@ -100,7 +100,12 @@ if (fs.existsSync(dataFile)) {
   if (!data.faq) data.faq = [];
   if (!data.forms) data.forms = [];
   if (!data.classes) data.classes = [];
-  if (!data.alert) data.alert = { title: '', content: '', color: 'yellow', active: false };
+  if (!data.alert) data.alert = { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true };
+  if (data.alert.color === 'yellow') data.alert.color = 'warning';
+  else if (data.alert.color === 'red') data.alert.color = 'danger';
+  if (data.alert.enableTitle === undefined) data.alert.enableTitle = true;
+  if (data.alert.enableContent === undefined) data.alert.enableContent = true;
+  if (data.alert.orientation === undefined) data.alert.orientation = 'top';
 } else {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 }
@@ -169,6 +174,9 @@ body { padding-top: 70px; }
     background-color: #001f3f; /* Matches navbar bg for consistency */
   }
 }
+.accordion-button { background-color: #001f3f; color: white; font-weight: 600; }
+.accordion-button:not(.collapsed) { background-color: #001f3f; color: white; }
+.accordion-button:focus { box-shadow: none; }
       </style>
       <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     </head>
@@ -196,8 +204,12 @@ body { padding-top: 70px; }
           </div>
         </div>
       </nav>
-  
       <div id="home" class="section active container mt-4">
+ ${data.alert.active && data.alert.orientation === 'top' ? `<div class="alert alert-${data.alert.color}" role="alert" style="position: fixed; top: 70px; left: 0; width: 100%; z-index: 1020;">
+          ${data.alert.enableTitle ? `<h4 class="alert-heading">${data.alert.title}</h4>` : ''}
+          ${data.alert.enableTitle && data.alert.enableContent ? '<hr>' : ''}
+          ${data.alert.enableContent ? `<p class="mb-0">${data.alert.content}</p>` : ''}
+        </div>` : ''}
  <div class="hero">
   <img src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
   <h1 style="color: white; font-weight: 700; font-size: 3rem; margin: 0 0 0.5rem 0; text-align: center;">J&T Accounting Services</h1>
@@ -212,21 +224,23 @@ body { padding-top: 70px; }
           <i class="bi bi-file-earmark-text-fill icon"></i>
           <i class="bi bi-graph-up-arrow icon"></i>
         </div>
-        ${data.alert.active ? `<div class="alert alert-${data.alert.color === 'yellow' ? 'warning' : 'danger'} mb-4" role="alert">
-          <h4 class="alert-heading">${data.alert.title}</h4>
-          <hr>
-          <p>${data.alert.content}</p>
-        </div>` : ''}
         <div class="text-center mb-4">
           <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
+ ${data.alert.active && data.alert.orientation === 'bottom' ? `<div class="alert alert-${data.alert.color}" role="alert" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1020;">
+          ${data.alert.enableTitle ? `<h4 class="alert-heading">${data.alert.title}</h4>` : ''}
+          ${data.alert.enableTitle && data.alert.enableContent ? '<hr>' : ''}
+          ${data.alert.enableContent ? `<p class="mb-0">${data.alert.content}</p>` : ''}
+        </div>` : ''}
       </div>
-  
       <div id="about" class="section container mt-4">
         <h2>About</h2>
-        <p>Placeholder for About section. Edit in dashboard if needed.</p>
+        <p>Hello, we're James Beltrame and Tiffiny Trupe, proud owners of J&T Accounting Services, LLC.</p>
+<p>James brings over 25 years in the custom home industry as a master tradesman and project manager. During the Great Recession, he leveraged his business degree, completed an H&R Block course, and became a tax preparer. He balanced six tax seasons at Block with his construction work—until our paths crossed.</p>
+<p>We met in 2016 at an H&R Block orientation, collaborating occasionally in the same office. By season's end, we launched our own practice from home, building a loyal clientele. In 2017, we opened an office and grew steadily until COVID prompted a shift to remote work. With today's technology, we deliver the same personalized service without in-person meetings. This evolution led us to relocate our practice to Utah, where we now call home. As an IRS Enrolled Agent (EA), James represents taxpayers nationwide across all 50 states.</p>
+<p>As for me, Tiffiny, I'm a mom to two amazing boys. I paused my accounting career to raise them and volunteer endlessly at their schools—it felt like I lived there! After my divorce, re-entering the workforce after 13 years was tough; no recent experience meant constant rejections. Spotting an H&R Block class, I thought, "What do I have to lose?" I passed but, due to a management mix-up, started as a Client Service Professional across two offices—where I met James. We connected weekly, and the rest is history. I believe things happen for a reason: that detour let me observe and refine my approach. I'm not one for multitasking chit-chat while crunching numbers—I thrive on focus.</p>
+<p>Together, we're a seamless team. I prepare every return; James reviews and we collaborate on solutions. We double-check everything, with James leading on corporate filings and IRS matters. We both love guiding businesses and cheering on our clients' success—because when they thrive, so do we!</p>
       </div>
-  
       <div id="services" class="section container mt-4">
         <h2>Services</h2>
         <div class="row">
@@ -264,7 +278,6 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
-  
       <div id="classes" class="section container mt-4">
         <h2>Classes</h2>
         <div class="row">
@@ -284,7 +297,6 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-  
       <div id="forms" class="section container mt-4">
         <h2>Forms</h2>
         <div class="row">
@@ -305,7 +317,6 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-  
       <div id="news" class="section container mt-4">
         <h2>News</h2>
         <div class="row">
@@ -325,7 +336,6 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-  
       <div id="faq" class="section container mt-4">
         <h2>FAQ</h2>
         <div class="accordion" id="faqAccordion">
@@ -347,56 +357,60 @@ body { padding-top: 70px; }
           `).join('') : ''}
         </div>
       </div>
-  
       <div id="contact" class="section container mt-4">
         <h2>Contact Us</h2>
         <p>See how our accounting expertise and personalized services can save you time, money, and frustration with managing your finances.  We offer both free introductary consultations and fee based analysis and on going advice.</p>
         <p>Please call or use the form below to set up an appointment.</p>
-        <p>Mailing Address</p>
-        <p>HC 74 Box 5110</p>
-        <p>Adamsville, UT 84731-5116</p>
-        <p>Please call for a consult or virtual appointment</p>
-        <p>help@jandtaccounting.com</p>
-        <p>951-409-3081</p>
-        <form id="contact-form">
-          <div class="mb-3">
-            <label for="firstName" class="form-label">First Name (Required)</label>
-            <input type="text" class="form-control" id="firstName" name="firstName" required>
-          </div>
-          <div class="mb-3">
-            <label for="lastName" class="form-label">Last Name (Required)</label>
-            <input type="text" class="form-control" id="lastName" name="lastName" required>
-          </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email Address (Required)</label>
-            <input type="email" class="form-control" id="email" name="email" required>
-          </div>
-          <div class="mb-3">
-            <label for="phone" class="form-label">Phone Number (Required)</label>
-            <input type="tel" class="form-control" id="phone" name="phone" required>
-          </div>
-          <div class="mb-3">
-            <label for="message" class="form-label">How Can We Help You?</label>
-            <textarea class="form-control" id="message" name="message" rows="3"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Submit</button>
-        </form>
+        <div class="alert alert-info mb-4" role="alert">
+          <p><strong>Mailing Address</strong></p>
+          <p>HC 74 Box 5110</p>
+          <p>Adamsville, UT 84731-5116</p>
+          <p>If you are sending us information via UPS or FedEx, please contact us for an alternative address.</p>
+        </div>
+        <p class="mb-4">Please call for a consult or virtual appointment</p>
+        <p class="mb-4">help@jandtaccounting.com</p>
+        <p class="mb-4">951-409-3081</p>
+        <div class="container mt-4">
+          <form id="contact-form">
+            <div class="mb-3">
+              <label for="firstName" class="form-label">First Name (Required)</label>
+              <input type="text" class="form-control" id="firstName" name="firstName" required>
+            </div>
+            <div class="mb-3">
+              <label for="lastName" class="form-label">Last Name (Required)</label>
+              <input type="text" class="form-control" id="lastName" name="lastName" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email Address (Required)</label>
+              <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            <div class="mb-3">
+              <label for="phone" class="form-label">Phone Number (Required)</label>
+              <input type="tel" class="form-control" id="phone" name="phone" required>
+            </div>
+            <div class="mb-3">
+              <label for="message" class="form-label">How Can We Help You?</label>
+              <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </form>
+        </div>
       </div>
-  
       <div id="irs" class="section container mt-4">
         <h2>IRS</h2>
         <p>IRS Website: <a href="https://www.irs.gov">https://www.irs.gov/</a></p>
       </div>
-  
       <div id="existingclients" class="section container mt-4">
         <h2>Existing Clients</h2>
         <p>Thanks for being a loyal customer.</p>
-        <p>Mailing Address: HC 74 Box 5110, Adamsville, UT 84731-5116</p>
-        <p>Email: <a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></p>
-        <p>Phone: 951-409-3081</p>
+        <div class="alert alert-info mb-4" role="alert">
+          <p><strong>Mailing Address:</strong> HC 74 Box 5110, Adamsville, UT 84731-5116</p>
+          <p>If you are sending us information via UPS or FedEx, please contact us for an alternative address.</p>
+        </div>
+        <p class="mb-4">Email: <a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></p>
+        <p class="mb-4">Phone: 951-409-3081</p>
         <p><a href="https://your-taxdome-url.com" target="_blank">Access Your TaxDome Site (Placeholder)</a></p>
       </div>
-  
       <!-- CAPTCHA Modal -->
       <div class="modal fade" id="captchaModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -411,7 +425,6 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
-  
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         let downloadUrl = '';
@@ -568,28 +581,43 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
   .btn-sm { font-size: 0.875rem; }
   h2 { font-size: 1.5rem; }
 }
+.dimmed { opacity: 0.5; }
       </style>
     </head>
     <body class="container mt-4">
       <h1>Dashboard</h1>
-  
       <!-- Home Page Alert Section -->
       <h2>Home Page Alert</h2>
       <div class="card mb-4">
         <div class="card-body">
-          <div class="form-group mb-3">
-            <label for="alert-title">Title</label>
+          <div class="form-group mb-3 d-flex align-items-center">
+            <label for="alert-title" class="me-2">Title</label>
+            <div id="alert-title-switch" class="form-check form-switch me-2">
+              <input class="form-check-input" type="checkbox" id="alert-enable-title" ${data.alert.enableTitle ? 'checked' : ''}>
+            </div>
             <input type="text" id="alert-title" class="form-control" value="${data.alert.title}">
           </div>
-          <div class="form-group mb-3">
-            <label for="alert-content">Content</label>
-            <input type="text" id="alert-content" class="form-control" value="${data.alert.content}">
+          <div class="form-group mb-3 d-flex align-items-center">
+            <label for="alert-content" class="me-2">Content</label>
+            <div id="alert-content-switch" class="form-check form-switch me-2">
+              <input class="form-check-input" type="checkbox" id="alert-enable-content" ${data.alert.enableContent ? 'checked' : ''}>
+            </div>
+            <textarea id="alert-content" class="form-control" rows="3">${data.alert.content}</textarea>
           </div>
           <div class="form-group mb-3">
             <label for="alert-color">Color</label>
             <select id="alert-color" class="form-control">
-              <option value="yellow" ${data.alert.color === 'yellow' ? 'selected' : ''}>Yellow (Warning)</option>
-              <option value="red" ${data.alert.color === 'red' ? 'selected' : ''}>Red (Danger)</option>
+              <option value="danger" ${data.alert.color === 'danger' ? 'selected' : ''}>Red</option>
+              <option value="warning" ${data.alert.color === 'warning' ? 'selected' : ''}>Yellow</option>
+              <option value="success" ${data.alert.color === 'success' ? 'selected' : ''}>Green</option>
+              <option value="light" ${data.alert.color === 'light' ? 'selected' : ''}>White</option>
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label for="alert-orientation">Orientation</label>
+            <select id="alert-orientation" class="form-control">
+              <option value="top" ${data.alert.orientation === 'top' ? 'selected' : ''}>Top</option>
+              <option value="bottom" ${data.alert.orientation === 'bottom' ? 'selected' : ''}>Bottom</option>
             </select>
           </div>
           <div class="form-group mb-3">
@@ -600,7 +628,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           </div>
         </div>
       </div>
-  
       <!-- News Section -->
       <h2>News</h2>
       <div class="table-responsive">
@@ -624,7 +651,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-  
       <!-- FAQ Section -->
       <h2>FAQ</h2>
       <div class="table-responsive">
@@ -648,7 +674,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-  
       <!-- Forms Section -->
       <h2>Forms<span class="ms-2" data-bs-toggle="tooltip" data-bs-title="Supports PDF and Excel (.xls, .xlsx) files"><i class="bi bi-question-circle" style="font-size: 0.8rem; color: black;"></i></span></h2>
       <div class="table-responsive">
@@ -673,7 +698,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-  
       <!-- Classes Section -->
       <h2>Classes</h2>
       <div class="table-responsive">
@@ -697,11 +721,9 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <div class="col"></div>
         <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
       </div>
-  
       <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
       <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
       <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
-  
       <script>
         var initialData = ${JSON.stringify(data)};
         var localData = JSON.parse(JSON.stringify(initialData));
@@ -873,11 +895,37 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             });
           }
         }
+        function updateAlertActive() {
+          const enableTitle = document.getElementById('alert-enable-title').checked;
+          const enableContent = document.getElementById('alert-enable-content').checked;
+          const activeSwitch = document.getElementById('alert-active');
+          const titleSwitchDiv = document.getElementById('alert-title-switch');
+          const contentSwitchDiv = document.getElementById('alert-content-switch');
+          if (!enableTitle && !enableContent) {
+            activeSwitch.checked = false;
+            activeSwitch.disabled = true;
+          } else {
+            activeSwitch.disabled = false;
+            if (!activeSwitch.checked) {
+              activeSwitch.checked = true;
+            }
+          }
+          if (!activeSwitch.checked) {
+            titleSwitchDiv.classList.add('dimmed');
+            contentSwitchDiv.classList.add('dimmed');
+          } else {
+            titleSwitchDiv.classList.remove('dimmed');
+            contentSwitchDiv.classList.remove('dimmed');
+          }
+        }
         function saveData() {
           localData.alert = {
             title: document.getElementById('alert-title').value.trim(),
             content: document.getElementById('alert-content').value.trim(),
             color: document.getElementById('alert-color').value,
+            orientation: document.getElementById('alert-orientation').value,
+            enableTitle: document.getElementById('alert-enable-title').checked,
+            enableContent: document.getElementById('alert-enable-content').checked,
             active: document.getElementById('alert-active').checked
           };
           fetch('/save', {
@@ -901,6 +949,10 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl)
         })
+        document.getElementById('alert-enable-title').addEventListener('change', updateAlertActive);
+        document.getElementById('alert-enable-content').addEventListener('change', updateAlertActive);
+        document.getElementById('alert-active').addEventListener('change', updateAlertActive);
+        updateAlertActive();
       </script>
     </body>
     </html>
@@ -1005,4 +1057,3 @@ app.get('/logout', (req, res) => {
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
-

@@ -1,79 +1,60 @@
 {
   "news": [
     {
-      "title": "ABDCED",
-      "content": "ABCEDED",
-      "editableDate": "2025-08-06",
-      "lastUpdated": "2025-08-05T19:04:36.669Z"
+      "title": "New Tax Prep Tool Now Available!",
+      "content": "Dear Valued Clients, We’re excited to announce the launch of our new Tax Prep Tool at LedgerLite Accounting! This feature simplifies gathering documents and estimating your tax obligations, saving you time this tax season. Log in to your account to try it out and let us know your feedback. As always, our team is here to assist with personalized support for all your accounting needs.",
+      "editableDate": "2025-08-18",
+      "lastUpdated": "2025-08-18T19:59:37.503Z"
     },
     {
-      "title": "asdasd",
-      "content": "sadadasd",
-      "editableDate": "2025-08-07",
-      "lastUpdated": "2025-08-06T13:40:40.210Z"
+      "title": "Free Workshop for Small Business Bookkeeping",
+      "content": "Dear Clients, Join us next month for a free virtual workshop on “Bookkeeping Basics for Small Businesses”! On September 10th at 6 PM, our expert accountants will share tips on managing expenses, tracking income, and staying audit-ready. Spots are limited, so reserve yours today via our client portal. LedgerLite Accounting is committed to empowering your financial success!",
+      "editableDate": "2025-08-15",
+      "lastUpdated": "2025-08-18T19:59:02.226Z"
     },
     {
-      "title": "asdasda",
-      "content": "asdasdsa",
-      "editableDate": "2025-08-20",
-      "lastUpdated": "2025-08-06T19:48:03.496Z"
+      "title": "Expanded Hours for Client Support",
+      "content": "Dear Valued Clients, To better serve you, LedgerLite Accounting is extending our support hours! Starting this week, our team is available from 8 AM to 8 PM, Monday through Friday, to answer your questions on invoicing, payroll, or anything else. Reach out via phone, email, or our new live chat feature. Thank you for trusting us with your accounting needs!",
+      "editableDate": "2025-08-19",
+      "lastUpdated": "2025-08-18T19:59:30.140Z"
     }
   ],
   "faq": [
     {
-      "title": "Untitled",
-      "content": "Dummy FAQ 1",
-      "editableDate": "2025-08-05",
-      "lastUpdated": "2025-08-05T18:52:41.839Z"
+      "title": "How do I avoid penalties and interest on my income taxes?",
+      "content": "Very simply…. pay all tax payments (including estimates) on time by the due date. Your total withholding or estimated tax must be either 100% of the prior years tax bill or 90% of your current tax bill. *For example, if your total federal tax liability on your 2023 return was $5,000, and your total tax liability in 2024 is $6,000, your 2024 withholding (or estimates paid) to avoid penalty must be $5,000. If your 2024 total tax liability is $4,500, then your minimum withholding would be $4,050. Anytime you owe more than $1,000 when you file, you can be subject to penalties unless these criteria are met.",
+      "editableDate": "2025-08-18",
+      "lastUpdated": "2025-08-18T20:01:34.387Z"
     },
     {
-      "title": "Untitled",
-      "content": "Dummy FAQ 2",
-      "editableDate": "2025-08-05",
-      "lastUpdated": "2025-08-05T18:52:41.839Z"
+      "title": "Why do I owe penalties and interest on my tax bill, or get additional bills in the mail after I file?",
+      "content": "This is a two-part question and our most common: Taxes are due when income is RECEIVED!! This is why taxes are always taken out of your paycheck on a regular basis. If you do not have taxes taken out…. Such as from self-employment or investments, then you must make quarterly estimated payments throughout the year. If you do NOT make proper estimated payments, the IRS and state tax agencies have the full legal right to access penalties for not doing so. Interest accrues when payments are not made by the due date (not including extensions). This includes payment dates for estimated quarterly payments as well.",
+      "editableDate": "2025-08-18",
+      "lastUpdated": "2025-08-18T20:01:56.977Z"
     }
   ],
-  "forms": [
-    {
-      "title": "a",
-      "content": "a",
-      "editableDate": "2025-08-06",
-      "lastUpdated": "2025-08-07T17:34:40.924Z",
-      "filename": "1754588080921.xls"
-    },
-    {
-      "title": "a",
-      "content": "a",
-      "editableDate": "2025-08-14",
-      "lastUpdated": "2025-08-07T17:34:57.290Z",
-      "filename": "1754588097289.xlsx"
-    },
-    {
-      "title": "a",
-      "content": "a",
-      "editableDate": "2025-08-28",
-      "lastUpdated": "2025-08-07T18:09:49.640Z",
-      "filename": "1754590189638.xlsx"
-    }
-  ],
+  "forms": [],
   "classes": [
     {
-      "title": "a class",
-      "content": "this class teaches you things",
-      "editableDate": "2025-08-07",
-      "lastUpdated": "2025-08-06T14:05:11.969Z"
+      "title": "Mastering Small Business Bookkeeping Basics",
+      "content": "This introductory class is designed for small business owners and freelancers new to bookkeeping. Learn how to set up a simple accounting system, track income and expenses, and reconcile accounts using tools like spreadsheets or affordable software. We’ll cover categorizing transactions, understanding basic financial statements, and tips for staying organized year-round. No prior accounting knowledge required! Next Date:",
+      "editableDate": "2025-08-21",
+      "lastUpdated": "2025-08-18T20:03:14.033Z"
     },
     {
-      "title": "class b",
-      "content": "class b",
-      "editableDate": "2025-08-06",
-      "lastUpdated": "2025-08-06T14:40:31.160Z"
+      "title": "Tax Prep 101: Maximize Your Deductions",
+      "content": "Dive into effective tax planning techniques tailored for small businesses and freelancers. Learn about common deductions, quarterly estimated taxes, and how to prepare for year-end filing. We'll discuss recent IRS changes and provide real-world examples to help minimize your tax liability legally. Interactive Q&A session included.",
+      "editableDate": "2025-08-20",
+      "lastUpdated": "2025-08-18T20:03:51.121Z"
     }
   ],
   "alert": {
-    "title": "TAXES DUE SOON",
-    "content": "Taxes are due soon.",
-    "color": "yellow",
+    "title": "2025 IRS Filing Deadlines Approaching",
+    "content": "J&T Accounting wants to remind you that the 2025 tax season is around the corner, and key IRS deadlines are approaching. For individual filers, the deadline to file your 2024 federal income tax return is April 15, 2026, unless you request an extension. Businesses with fiscal year-ends should check specific deadlines for corporate or partnership returns.\n\nTo stay prepared, we recommend gathering your financial documents now and using our Tax Prep Tool to streamline the process. For the latest IRS guidelines and forms, visit IRS.gov. Our team is here to assist with any questions or personalized tax planning—contact us today via the client portal or call us",
+    "color": "success",
+    "orientation": "top",
+    "enableTitle": true,
+    "enableContent": true,
     "active": true
   }
 }
