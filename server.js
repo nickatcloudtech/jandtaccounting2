@@ -15,9 +15,11 @@ const fs = require('fs');
 // MongoDB Connection with Logging
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  dbName: 'accounting-dashboard',
+  serverSelectionTimeoutMS: 30000  // Increase to 30s
 }).then(() => {
-  console.log('MongoDB connected successfully');
+  console.log('MongoDB connected successfully to accounting-dashboard');
 }).catch(err => {
   console.error('MongoDB connection error:', err);
 });
@@ -165,7 +167,11 @@ function isAuthenticated(req, res, next) {
 app.get('/', async (req, res) => {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-    const newsData = await News.find().sort({ lastUpdated: -1 });
+    const retry = require('async-retry');
+    const newsData = await retry(async () => await News.find().sort({ lastUpdated: -1 }), {
+	  retries: 3,
+	  minTimeout: 1000
+  	 });
     const faqData = await Faq.find().sort({ lastUpdated: -1 });
     const formsData = await Form.find().sort({ lastUpdated: -1 });
     const classesData = await Class.find().sort({ lastUpdated: -1 });
