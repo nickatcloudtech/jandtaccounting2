@@ -2,14 +2,105 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const fs = require('fs');
 const bcrypt = require('bcrypt');
 const helmet = require('helmet');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const mongoose = require('mongoose');
 const app = express();
+const fs = require('fs');
+
+// MongoDB Connection with Logging
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('MongoDB connected successfully');
+}).catch(err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('error', err => {
+  console.error('MongoDB error:', err);
+});
+
+// Define Schemas
+const AlertSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  color: String,
+  active: Boolean,
+  orientation: String,
+  enableTitle: Boolean,
+  enableContent: Boolean
+});
+const Alert = mongoose.model('Alert', AlertSchema, 'alerts');
+
+const NewsSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  lastUpdated: Date
+});
+const News = mongoose.model('News', NewsSchema, 'news');
+
+const FaqSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  lastUpdated: Date
+});
+const Faq = mongoose.model('Faq', FaqSchema, 'faqs');
+
+const FormSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  lastUpdated: Date,
+  filename: String
+});
+const Form = mongoose.model('Form', FormSchema, 'forms');
+
+const ClassSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  lastUpdated: Date,
+  active: Boolean,
+  roster: [{
+    firstName: String,
+    lastName: String,
+    email: String,
+    date: Date
+  }]
+});
+const Class = mongoose.model('Class', ClassSchema, 'classes');
+
+// Initialize Default Data if Collections are Empty
+(async () => {
+  try {
+    if (await News.countDocuments() === 0) {
+      await News.create({ title: 'Default News Title', content: 'Default news content', lastUpdated: new Date() });
+      console.log('Default news initialized');
+    }
+    if (await Faq.countDocuments() === 0) {
+      await Faq.create({ title: 'Default FAQ Title', content: 'Default FAQ content', lastUpdated: new Date() });
+      console.log('Default FAQ initialized');
+    }
+    if (await Form.countDocuments() === 0) {
+      console.log('Forms collection is empty, no defaults needed');
+    }
+    if (await Class.countDocuments() === 0) {
+      await Class.create({ title: 'Default Class Title', content: 'Default class content', lastUpdated: new Date(), active: false, roster: [] });
+      console.log('Default class initialized');
+    }
+    if (await Alert.countDocuments() === 0) {
+      await Alert.create({ title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true });
+      console.log('Default alert initialized');
+    }
+  } catch (err) {
+    console.error('Error initializing defaults:', err);
+  }
+})();
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(session({ secret: process.env.SESSION_SECRET || 'secret-key', resave: false, saveUninitialized: true }));
@@ -62,53 +153,7 @@ app.use('/forms', (req, res, next) => {
   }
 });
 app.use('/images', express.static('images'));
-const dataFile = 'data.json';
-let data = {
-  news: [
-    { title: 'Default News Title', content: 'Default news content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
-  ],
-  faq: [
-    { title: 'Default FAQ Title', content: 'Default FAQ content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
-  ],
-  forms: [], // Removed dummy data
-  classes: [
-    { title: 'Default Class Title', content: 'Default class content', editableDate: '2023-01-01', lastUpdated: new Date().toISOString() }
-  ],
-  alert: { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true }
-};
-if (fs.existsSync(dataFile)) {
-  let loadedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-  // Migrate if old format (no title)
-  Object.keys(loadedData).forEach(key => {
-    if (key !== 'alert') {
-      loadedData[key] = loadedData[key].map(item => {
-        if (!item.title) {
-          return {
-            title: 'Untitled',
-            content: item.content || 'Default content',
-            editableDate: item.editableDate || new Date().toISOString().split('T')[0],
-            lastUpdated: item.lastUpdated || new Date().toISOString(),
-            filename: item.filename || '' // Add filename if missing
-          };
-        }
-        return item;
-      });
-    }
-  });
-  data = loadedData;
-  if (!data.news) data.news = [];
-  if (!data.faq) data.faq = [];
-  if (!data.forms) data.forms = [];
-  if (!data.classes) data.classes = [];
-  if (!data.alert) data.alert = { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true };
-  if (data.alert.color === 'yellow') data.alert.color = 'warning';
-  else if (data.alert.color === 'red') data.alert.color = 'danger';
-  if (data.alert.enableTitle === undefined) data.alert.enableTitle = true;
-  if (data.alert.enableContent === undefined) data.alert.enableContent = true;
-  if (data.alert.orientation === undefined) data.alert.orientation = 'top';
-} else {
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-}
+
 // Authentication middleware
 function isAuthenticated(req, res, next) {
   if (req.session.authenticated) {
@@ -117,9 +162,21 @@ function isAuthenticated(req, res, next) {
   res.redirect('/schwertfisch');
 }
 // Main page: Renders data as stacked cards with Bootstrap
-app.get('/', (req, res) => {
-  const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-  let html = `
+app.get('/', async (req, res) => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    const newsData = await News.find().sort({ lastUpdated: -1 });
+    const faqData = await Faq.find().sort({ lastUpdated: -1 });
+    const formsData = await Form.find().sort({ lastUpdated: -1 });
+    const classesData = await Class.find().sort({ lastUpdated: -1 });
+    const alertData = await Alert.findOne() || { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true };
+    console.log('Retrieved news:', newsData.length);
+    console.log('Retrieved FAQs:', faqData.length);
+    console.log('Retrieved forms:', formsData.length);
+    console.log('Retrieved classes:', classesData.length);
+    console.log('Retrieved alert:', alertData ? 'Yes' : 'No');
+
+    let html = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -135,16 +192,8 @@ body { padding-top: 70px; }
         .navbar-brand { color: white; font-weight: 700; font-size: 1.5rem; }
         .nav-link { color: white; font-weight: 600; }
         .btn-contact { background-color: #ffd700; border-color: #ffd700; color: #001f3f; border-radius: 20px; font-weight: 600; }
-.hero {
-    /* Existing styles */
-    padding: 6rem 0; /* Increased padding by 50% from 4rem to 6rem for height */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/images/ranch.jpg');
- }
- .hero-logo {
+.hero {padding: 6rem 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("/images/ranch.jpg"); background-size: cover; background-position: center; background-repeat: no-repeat;}
+.hero-logo {
     /* Remove absolute positioning */
     position: static;
     width: 300px; /* Adjusted width for centering; adjust as needed */
@@ -205,10 +254,10 @@ body { padding-top: 70px; }
         </div>
       </nav>
       <div id="home" class="section active container mt-4">
- ${data.alert.active && data.alert.orientation === 'top' ? `<div class="alert alert-${data.alert.color}" role="alert" style="position: fixed; top: 70px; left: 0; width: 100%; z-index: 1020;">
-          ${data.alert.enableTitle ? `<h4 class="alert-heading">${data.alert.title}</h4>` : ''}
-          ${data.alert.enableTitle && data.alert.enableContent ? '<hr>' : ''}
-          ${data.alert.enableContent ? `<p class="mb-0">${data.alert.content}</p>` : ''}
+ ${alertData.active && alertData.orientation === 'top' ? `<div class="alert alert-${alertData.color}" role="alert" style="position: fixed; top: 70px; left: 0; width: 100%; z-index: 1020;">
+          ${alertData.enableTitle ? `<h4 class="alert-heading">${alertData.title}</h4>` : ''}
+          ${alertData.enableTitle && alertData.enableContent ? '<hr>' : ''}
+          ${alertData.enableContent ? `<p class="mb-0">${alertData.content}</p>` : ''}
         </div>` : ''}
  <div class="hero">
   <img src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
@@ -227,10 +276,10 @@ body { padding-top: 70px; }
         <div class="text-center mb-4">
           <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
- ${data.alert.active && data.alert.orientation === 'bottom' ? `<div class="alert alert-${data.alert.color}" role="alert" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1020;">
-          ${data.alert.enableTitle ? `<h4 class="alert-heading">${data.alert.title}</h4>` : ''}
-          ${data.alert.enableTitle && data.alert.enableContent ? '<hr>' : ''}
-          ${data.alert.enableContent ? `<p class="mb-0">${data.alert.content}</p>` : ''}
+ ${alertData.active && alertData.orientation === 'bottom' ? `<div class="alert alert-${alertData.color}" role="alert" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1020;">
+          ${alertData.enableTitle ? `<h4 class="alert-heading">${alertData.title}</h4>` : ''}
+          ${alertData.enableTitle && alertData.enableContent ? '<hr>' : ''}
+          ${alertData.enableContent ? `<p class="mb-0">${alertData.content}</p>` : ''}
         </div>` : ''}
       </div>
       <div id="about" class="section container mt-4">
@@ -281,13 +330,13 @@ body { padding-top: 70px; }
       <div id="classes" class="section container mt-4">
         <h2>Classes</h2>
         <div class="row">
-          ${data.classes ? data.classes.map(c => `
+          ${classesData ? classesData.map(c => `
             <div class="col-12 mb-3">
               <div class="card">
                 <div class="card-header"><strong>${c.title}</strong></div>
                 <div class="card-body">
                   ${c.content}
-                  <p class="mt-2 text-muted">Date: ${c.editableDate}</p>
+                  ${c.active ? `<button class="btn btn-primary btn-sm mt-2" onclick="openSignupModal('${c._id}')">Sign Up</button>` : ''}
                 </div>
                 <div class="card-footer text-muted">
                   <small><i><strong>Last Updated: <span class="local-datetime" data-iso="${c.lastUpdated}">${formatter.format(new Date(c.lastUpdated))}</span></strong></i></small>
@@ -300,13 +349,12 @@ body { padding-top: 70px; }
       <div id="forms" class="section container mt-4">
         <h2>Forms</h2>
         <div class="row">
-          ${data.forms ? data.forms.map(f => `
+          ${formsData ? formsData.map(f => `
             <div class="col-12 mb-3">
               <div class="card">
                 <div class="card-header"><strong>${f.title}</strong></div>
                 <div class="card-body">
                   ${f.content}
-                  <p class="mt-2 text-muted">Date: ${f.editableDate}</p>
                   ${f.filename ? `<button onclick="attemptDownload('/forms/${f.filename}')" class="btn btn-primary btn-sm">Download Form</button>` : ''}
                 </div>
                 <div class="card-footer text-muted">
@@ -320,13 +368,12 @@ body { padding-top: 70px; }
       <div id="news" class="section container mt-4">
         <h2>News</h2>
         <div class="row">
-          ${data.news ? data.news.map(n => `
+          ${newsData ? newsData.map(n => `
             <div class="col-12 mb-3">
               <div class="card">
                 <div class="card-header"><strong>${n.title}</strong></div>
                 <div class="card-body">
                   ${n.content}
-                  <p class="mt-2 text-muted">Date: ${n.editableDate}</p>
                 </div>
                 <div class="card-footer text-muted">
                   <small><i><strong>Last Updated: <span class="local-datetime" data-iso="${n.lastUpdated}">${formatter.format(new Date(n.lastUpdated))}</span></strong></i></small>
@@ -339,7 +386,7 @@ body { padding-top: 70px; }
       <div id="faq" class="section container mt-4">
         <h2>FAQ</h2>
         <div class="accordion" id="faqAccordion">
-          ${data.faq ? data.faq.map((f, index) => `
+          ${faqData ? faqData.map((f, index) => `
             <div class="accordion-item">
               <h2 class="accordion-header" id="heading${index}">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
@@ -349,7 +396,6 @@ body { padding-top: 70px; }
               <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}" data-bs-parent="#faqAccordion">
                 <div class="accordion-body">
                   ${f.content}
-                  <p class="mt-2 text-muted">Date: ${f.editableDate}</p>
                   <small><i><strong>Last Updated: <span class="local-datetime" data-iso="${f.lastUpdated}">${formatter.format(new Date(f.lastUpdated))}</span></strong></i></small>
                 </div>
               </div>
@@ -359,7 +405,7 @@ body { padding-top: 70px; }
       </div>
       <div id="contact" class="section container mt-4">
         <h2>Contact Us</h2>
-        <p>See how our accounting expertise and personalized services can save you time, money, and frustration with managing your finances.  We offer both free introductary consultations and fee based analysis and on going advice.</p>
+        <p>See how our accounting expertise and personalized services can save you time, money, and frustration with managing your finances. We offer both free introductary consultations and fee based analysis and on going advice.</p>
         <p>Please call or use the form below to set up an appointment.</p>
         <div class="alert alert-info mb-4" role="alert">
           <p><strong>Mailing Address</strong></p>
@@ -425,9 +471,39 @@ body { padding-top: 70px; }
           </div>
         </div>
       </div>
+      <!-- Signup Modal -->
+      <div class="modal fade" id="signupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Sign Up for Class</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="signup-first" class="form-label">First Name (Required)</label>
+                <input type="text" class="form-control" id="signup-first" required>
+              </div>
+              <div class="mb-3">
+                <label for="signup-last" class="form-label">Last Name (Required)</label>
+                <input type="text" class="form-control" id="signup-last" required>
+              </div>
+              <div class="mb-3">
+                <label for="signup-email" class="form-label">Email Address (Required)</label>
+                <input type="email" class="form-control" id="signup-email" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="submitSignup()">Confirm</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         let downloadUrl = '';
+        let currentClassId = '';
         function attemptDownload(url) {
           fetch('/check-verified')
             .then(response => response.json())
@@ -453,6 +529,35 @@ body { padding-top: 70px; }
               alert('CAPTCHA verification failed');
             }
           }).finally(() => bootstrap.Modal.getInstance(document.getElementById('captchaModal')).hide());
+        }
+        function openSignupModal(classId) {
+          currentClassId = classId;
+          var myModal = new bootstrap.Modal(document.getElementById('signupModal'));
+          myModal.show();
+        }
+        function submitSignup() {
+          const first = document.getElementById('signup-first').value.trim();
+          const last = document.getElementById('signup-last').value.trim();
+          const email = document.getElementById('signup-email').value.trim();
+          if (!first || !last || !email) {
+            alert('Please fill all required fields.');
+            return;
+          }
+          fetch('/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ firstName: first, lastName: last, email, classId: currentClassId })
+          }).then(response => {
+            if (response.ok) {
+              alert('Signed up successfully!');
+              bootstrap.Modal.getInstance(document.getElementById('signupModal')).hide();
+              document.getElementById('signup-first').value = '';
+              document.getElementById('signup-last').value = '';
+              document.getElementById('signup-email').value = '';
+            } else {
+              alert('Signup failed');
+            }
+          });
         }
        function showSection(sectionId) {
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
@@ -482,11 +587,18 @@ body { padding-top: 70px; }
     alert('Error sending message: ' + errorText); // Show detailed alert (using single quotes as you tried)
   }
 });
+document.getElementById('copyright-year').textContent = new Date().getFullYear();
       </script>
-    </body>
+    	<footer>
+	</footer>
+	</body>
     </html>
   `;
-  res.send(html);
+    res.send(html);
+  } catch (err) {
+    console.error('Error rendering main page:', err);
+    res.status(500).send('Server error');
+  }
 });
 // Login page with Bootstrap
 app.get('/schwertfisch', (req, res) => {
@@ -504,6 +616,8 @@ app.get('/schwertfisch', (req, res) => {
         .btn-primary { background-color: #8fb98b; border-color: #8fb98b; border-radius: 20px; font-weight: 600; color: white; }
         .btn-primary:hover { background-color: #79a076; }
         h1 { color: #001f3f; font-weight: 700; }
+	footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #6c757d; font-style: italic; }
+	footer a { color: #6c757d; text-decoration: underline; }
       </style>
     </head>
     <body class="container mt-4">
@@ -554,8 +668,21 @@ app.post('/schwertfisch', async (req, res) => {
   }
 });
 // Dashboard page with tables, drag-drop, editing, Bootstrap
-app.get('/dashboard', isAuthenticated, (req, res) => {
-  let html = `
+app.get('/dashboard', isAuthenticated, async (req, res) => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    const newsData = await News.find().sort({ lastUpdated: -1 });
+    const faqData = await Faq.find().sort({ lastUpdated: -1 });
+    const formsData = await Form.find().sort({ lastUpdated: -1 });
+    const classesData = await Class.find().sort({ lastUpdated: -1 });
+    const alertData = await Alert.findOne() || { title: '', content: '', color: 'warning', active: false, orientation: 'top', enableTitle: true, enableContent: true };
+    console.log('Retrieved news for dashboard:', newsData.length);
+    console.log('Retrieved FAQs for dashboard:', faqData.length);
+    console.log('Retrieved forms for dashboard:', formsData.length);
+    console.log('Retrieved classes for dashboard:', classesData.length);
+    console.log('Retrieved alert for dashboard:', alertData ? 'Yes' : 'No');
+
+    let html = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -566,7 +693,10 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
       <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
-body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; }
+body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #333; padding-top: 70px; }
+        .navbar { background-color: #001f3f; }
+        .navbar-brand { color: white; font-weight: 700; font-size: 1.5rem; }
+        .nav-link { color: white; font-weight: 600; }
         .table { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .btn-success { background-color: #8fb98b; border-color: #8fb98b; border-radius: 20px; font-weight: 600; color: white; }
         .btn-primary { background-color: #001f3f; border-color: #001f3f; border-radius: 20px; font-weight: 600; color: white; }
@@ -582,150 +712,217 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
   h2 { font-size: 1.5rem; }
 }
 .dimmed { opacity: 0.5; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
       </style>
     </head>
-    <body class="container mt-4">
-      <h1>Dashboard</h1>
-      <!-- Home Page Alert Section -->
-      <h2>Home Page Alert</h2>
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="form-group mb-3 d-flex align-items-center">
-            <label for="alert-title" class="me-2">Title</label>
-            <div id="alert-title-switch" class="form-check form-switch me-2">
-              <input class="form-check-input" type="checkbox" id="alert-enable-title" ${data.alert.enableTitle ? 'checked' : ''}>
-            </div>
-            <input type="text" id="alert-title" class="form-control" value="${data.alert.title}">
-          </div>
-          <div class="form-group mb-3 d-flex align-items-center">
-            <label for="alert-content" class="me-2">Content</label>
-            <div id="alert-content-switch" class="form-check form-switch me-2">
-              <input class="form-check-input" type="checkbox" id="alert-enable-content" ${data.alert.enableContent ? 'checked' : ''}>
-            </div>
-            <textarea id="alert-content" class="form-control" rows="3">${data.alert.content}</textarea>
-          </div>
-          <div class="form-group mb-3">
-            <label for="alert-color">Color</label>
-            <select id="alert-color" class="form-control">
-              <option value="danger" ${data.alert.color === 'danger' ? 'selected' : ''}>Red</option>
-              <option value="warning" ${data.alert.color === 'warning' ? 'selected' : ''}>Yellow</option>
-              <option value="success" ${data.alert.color === 'success' ? 'selected' : ''}>Green</option>
-              <option value="light" ${data.alert.color === 'light' ? 'selected' : ''}>White</option>
-            </select>
-          </div>
-          <div class="form-group mb-3">
-            <label for="alert-orientation">Orientation</label>
-            <select id="alert-orientation" class="form-control">
-              <option value="top" ${data.alert.orientation === 'top' ? 'selected' : ''}>Top</option>
-              <option value="bottom" ${data.alert.orientation === 'bottom' ? 'selected' : ''}>Bottom</option>
-            </select>
-          </div>
-          <div class="form-group mb-3">
-            <label for="alert-active">Active</label>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="alert-active" ${data.alert.active ? 'checked' : ''}>
-            </div>
+    <body>
+      <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Dashboard</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('sections')">Sections</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('classes')">Classes</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('analytics')">Analytics</a></li>
+            </ul>
           </div>
         </div>
+      </nav>
+      <div class="container mt-4">
+        <div id="sections-tab" class="tab-content active">
+          <!-- Home Page Alert Section -->
+          <h2>Home Page Alert</h2>
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="form-group mb-3 d-flex align-items-center">
+                <label for="alert-title" class="me-2">Title</label>
+                <div id="alert-title-switch" class="form-check form-switch me-2">
+                  <input class="form-check-input" type="checkbox" id="alert-enable-title" ${alertData.enableTitle ? 'checked' : ''}>
+                </div>
+                <input type="text" id="alert-title" class="form-control" value="${alertData.title || ''}">
+              </div>
+              <div class="form-group mb-3 d-flex align-items-center">
+                <label for="alert-content" class="me-2">Content</label>
+                <div id="alert-content-switch" class="form-check form-switch me-2">
+                  <input class="form-check-input" type="checkbox" id="alert-enable-content" ${alertData.enableContent ? 'checked' : ''}>
+                </div>
+                <textarea id="alert-content" class="form-control" rows="3">${alertData.content || ''}</textarea>
+              </div>
+              <div class="form-group mb-3">
+                <label for="alert-color">Color</label>
+                <select id="alert-color" class="form-control">
+                  <option value="danger" ${alertData.color === 'danger' ? 'selected' : ''}>Red</option>
+                  <option value="warning" ${alertData.color === 'warning' ? 'selected' : ''}>Yellow</option>
+                  <option value="success" ${alertData.color === 'success' ? 'selected' : ''}>Green</option>
+                  <option value="light" ${alertData.color === 'light' ? 'selected' : ''}>White</option>
+                </select>
+              </div>
+              <div class="form-group mb-3">
+                <label for="alert-orientation">Orientation</label>
+                <select id="alert-orientation" class="form-control">
+                  <option value="top" ${alertData.orientation === 'top' ? 'selected' : ''}>Top</option>
+                  <option value="bottom" ${alertData.orientation === 'bottom' ? 'selected' : ''}>Bottom</option>
+                </select>
+              </div>
+              <div class="form-group mb-3">
+                <label for="alert-active">Active</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="alert-active" ${alertData.active ? 'checked' : ''}>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- News Section -->
+          <h2>News</h2>
+          <div class="table-responsive">
+  <table id="news-table" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Content</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="news-tbody"></tbody>
+          </table>
+          </div>
+          <div class="row mb-3">
+            <div class="col"><input id="news-title-add" class="form-control" placeholder="Title"></div>
+            <div class="col"><input id="news-content-add" class="form-control" placeholder="Content"></div>
+            <div class="col"></div>
+            <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
+          </div>
+          <!-- FAQ Section -->
+          <h2>FAQ</h2>
+          <div class="table-responsive">
+  <table id="faq-table" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Content</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="faq-tbody"></tbody>
+          </table>
+          </div>
+          <div class="row mb-3">
+            <div class="col"><input id="faq-title-add" class="form-control" placeholder="Title"></div>
+            <div class="col"><input id="faq-content-add" class="form-control" placeholder="Content"></div>
+            <div class="col"></div>
+            <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
+          </div>
+          <!-- Forms Section -->
+          <h2>Forms<span class="ms-2" data-bs-toggle="tooltip" data-bs-title="Supports PDF and Excel (.xls, .xlsx) files"><i class="bi bi-question-circle" style="font-size: 0.8rem; color: black;"></i></span></h2>
+          <div class="table-responsive">
+           <table id="forms-table" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Content</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="forms-tbody"></tbody>
+          </table>
+          </div>
+          <div class="row mb-3">
+            <div class="col"><input id="forms-title-add" class="form-control" placeholder="Title"></div>
+            <div class="col"><input id="forms-content-add" class="form-control" placeholder="Content"></div>
+            <div class="col"><input id="forms-file-add" type="file" class="form-control"></div>
+            <div class="col"></div>
+            <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
+          </div>
+        </div>
+        <div id="classes-tab" class="tab-content">
+          <!-- Classes Section -->
+          <h2>Classes</h2>
+          <div class="table-responsive">
+  <table id="classes-table" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Content</th>
+                <th>Active</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="classes-tbody"></tbody>
+          </table>
+          </div>
+          <div class="row mb-3">
+            <div class="col"><input id="classes-title-add" class="form-control" placeholder="Title"></div>
+            <div class="col"><input id="classes-content-add" class="form-control" placeholder="Content"></div>
+            <div class="col-auto">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="classes-active-add">
+                <label class="form-check-label" for="classes-active-add">Active</label>
+              </div>
+            </div>
+            <div class="col"></div>
+            <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
+          </div>
+          <h2>Rosters</h2>
+          <div class="row">
+            ${classesData.filter(c => c.active).map(c => `
+              <div class="col-12 mb-3">
+                <div class="card">
+                  <div class="card-header"><strong>Roster for ${c.title}</strong></div>
+                  <div class="card-body">
+                    ${c.roster.length > 0 ? `
+                      <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Signup Date</th>
+                            <th>Actions</th> 
+			 </tr>
+                        </thead>
+                        <tbody>
+                          ${c.roster.map((r, index) => `
+                            <tr>
+                              <td>${r.firstName}</td>
+                              <td>${r.lastName}</td>
+                              <td>${r.email}</td>
+                              <td>${formatter.format(new Date(r.date))}</td>
+                              <td><button class="btn btn-danger btn-sm" onclick="deleteRosterEntry('${c._id}', ${index})"><i class="bi bi-trash"></i></button></td>  
+			  </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    ` : '<p>No signups yet.</p>'}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div id="analytics-tab" class="tab-content">
+          <h2>Analytics</h2>
+          <p>Coming soon...</p>
+        </div>
+        <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
+        <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
+        <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
-      <!-- News Section -->
-      <h2>News</h2>
-      <div class="table-responsive">
-<table id="news-table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Editable Date</th>
-            <th>Last Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="news-tbody"></tbody>
-      </table>
-      </div>
-      <div class="row mb-3">
-        <div class="col"><input id="news-title-add" class="form-control" placeholder="Title"></div>
-        <div class="col"><input id="news-content-add" class="form-control" placeholder="Content"></div>
-        <div class="col"><input id="news-date-add" type="date" class="form-control"></div>
-        <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('news')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
-      </div>
-      <!-- FAQ Section -->
-      <h2>FAQ</h2>
-      <div class="table-responsive">
-<table id="faq-table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Editable Date</th>
-            <th>Last Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="faq-tbody"></tbody>
-      </table>
-      </div>
-      <div class="row mb-3">
-        <div class="col"><input id="faq-title-add" class="form-control" placeholder="Title"></div>
-        <div class="col"><input id="faq-content-add" class="form-control" placeholder="Content"></div>
-        <div class="col"><input id="faq-date-add" type="date" class="form-control"></div>
-        <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('faq')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
-      </div>
-      <!-- Forms Section -->
-      <h2>Forms<span class="ms-2" data-bs-toggle="tooltip" data-bs-title="Supports PDF and Excel (.xls, .xlsx) files"><i class="bi bi-question-circle" style="font-size: 0.8rem; color: black;"></i></span></h2>
-      <div class="table-responsive">
-       <table id="forms-table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Editable Date</th>
-            <th>Last Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="forms-tbody"></tbody>
-      </table>
-      </div>
-      <div class="row mb-3">
-        <div class="col"><input id="forms-title-add" class="form-control" placeholder="Title"></div>
-        <div class="col"><input id="forms-content-add" class="form-control" placeholder="Content"></div>
-        <div class="col"><input id="forms-date-add" type="date" class="form-control"></div>
-        <div class="col"><input id="forms-file-add" type="file" class="form-control"></div>
-        <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('forms')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
-      </div>
-      <!-- Classes Section -->
-      <h2>Classes</h2>
-      <div class="table-responsive">
-<table id="classes-table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Editable Date</th>
-            <th>Last Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="classes-tbody"></tbody>
-      </table>
-      </div>
-      <div class="row mb-3">
-        <div class="col"><input id="classes-title-add" class="form-control" placeholder="Title"></div>
-        <div class="col"><input id="classes-content-add" class="form-control" placeholder="Content"></div>
-        <div class="col"><input id="classes-date-add" type="date" class="form-control"></div>
-        <div class="col"></div>
-        <div class="col-auto"><button onclick="addItem('classes')" class="btn btn-success"><i class="bi bi-plus-circle"></i></button></div>
-      </div>
-      <button onclick="saveData()" class="btn btn-primary mt-3"><i class="bi bi-save"></i> Save Changes</button>
-      <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
-      <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       <script>
-        var initialData = ${JSON.stringify(data)};
+        var initialData = {
+          news: ${JSON.stringify(newsData)},
+          faq: ${JSON.stringify(faqData)},
+          forms: ${JSON.stringify(formsData)},
+          classes: ${JSON.stringify(classesData)},
+          alert: ${JSON.stringify(alertData)}
+        };
         var localData = JSON.parse(JSON.stringify(initialData));
         var editingRow = null; // Track currently editing row
         function updateTable(section) {
@@ -736,16 +933,39 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             row.draggable = true;
             row.dataset.index = index;
             row.dataset.section = section;
-            row.innerHTML = \`
-              <td>\${item.title}</td>
-              <td>\${item.content}</td>
-              <td><input type="date" value="\${item.editableDate}" onchange="updateDate('\${section}', \${index}, this.value)"></td>
-      <td>\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</td>
-              <td>
-                <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
-                <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
-              </td>
-            \`;
+            row.dataset.id = item._id;
+            if (section === 'classes') {
+              row.innerHTML = \`
+                <td>\${item.title}</td>
+                <td>\${item.content}</td>
+                <td>\${item.active ? 'Yes' : 'No'}</td>
+                <td>\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</td>
+                <td>
+                  <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
+                  <button onclick="removeItem('\${section}', '\${item._id}')" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+                </td>
+              \`;
+            } else if (section === 'forms') {
+              row.innerHTML = \`
+                <td>\${item.title}</td>
+                <td>\${item.content}</td>
+                <td>\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</td>
+                <td>
+                  <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
+                  <button onclick="removeItem('\${section}', '\${item._id}')" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+                </td>
+              \`;
+            } else {
+              row.innerHTML = \`
+                <td>\${item.title}</td>
+                <td>\${item.content}</td>
+                <td>\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}</td>
+                <td>
+                  <button onclick="editRow(this)" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i></button>
+                  <button onclick="removeItem('\${section}', '\${item._id}')" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+                </td>
+              \`;
+            }
             tbody.appendChild(row);
           });
           addDragListeners(section);
@@ -773,10 +993,15 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             const [fromIndex, fromSection] = e.dataTransfer.getData('text/plain').split(',');
             if (fromSection !== section) return;
             const rows = Array.from(tbody.children);
-            const newOrder = rows.map(row => parseInt(row.dataset.index));
-            const newData = newOrder.map(idx => localData[section][idx]);
-            localData[section] = newData;
-            updateTable(section);
+            const newOrder = rows.map(row => localData[section][row.dataset.index]._id);
+            fetch('/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ section, order: newOrder })
+            }).then(() => {
+              localData[section] = rows.map(row => localData[section][row.dataset.index]);
+              updateTable(section);
+            });
           });
           tbody.addEventListener('dragend', (e) => {
             e.target.classList.remove('dragging');
@@ -804,28 +1029,50 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           var item = localData[section][index];
           cells[0].innerHTML = \`<input type="text" value="\${item.title}" class="form-control">\`;
           cells[1].innerHTML = \`<input type="text" value="\${item.content}" class="form-control">\`;
-          // Date remains input
-          // Last updated remains
-          cells[4].innerHTML = \`
-            <button onclick="saveEdit(this)" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i></button>
-            <button onclick="cancelEdit(this)" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i></button>
-            <button onclick="removeItem('\${section}', \${index})" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
-          \`;
+          if (section === 'classes') {
+            cells[2].innerHTML = \`<div class="form-check form-switch"><input class="form-check-input" type="checkbox" \${item.active ? 'checked' : ''}></div>\`;
+            cells[3].innerHTML = \`\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.lastUpdated))}\`;
+            cells[4].innerHTML = \`
+              <button onclick="saveEdit(this)" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i></button>
+              <button onclick="cancelEdit(this)" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i></button>
+              <button onclick="removeItem('\${section}', '\${item._id}')" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+            \`;
+          } else {
+            // Last updated remains
+            cells[3].innerHTML = \`
+              <button onclick="saveEdit(this)" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i></button>
+              <button onclick="cancelEdit(this)" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i></button>
+              <button onclick="removeItem('\${section}', '\${item._id}')" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+            \`;
+          }
           row.draggable = false; // Disable drag while editing
         }
         function saveEdit(button) {
           var row = button.parentNode.parentNode;
           var section = row.dataset.section;
-          var index = parseInt(row.dataset.index);
+          var id = row.dataset.id;
           var titleInput = row.cells[0].querySelector('input');
           var contentInput = row.cells[1].querySelector('input');
-          var dateInput = row.cells[2].querySelector('input');
-          localData[section][index].title = titleInput.value.trim();
-          localData[section][index].content = contentInput.value.trim();
-          localData[section][index].editableDate = dateInput.value;
-          localData[section][index].lastUpdated = new Date().toISOString();
-          editingRow = null;
-          updateTable(section);
+          var updateData = {
+            title: titleInput.value.trim(),
+            content: contentInput.value.trim(),
+            lastUpdated: new Date().toISOString()
+          };
+          if (section === 'classes') {
+            var activeInput = row.cells[2].querySelector('input');
+            updateData.active = activeInput.checked;
+          }
+          fetch('/update-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section, id, updateData })
+          }).then(response => {
+            if (response.ok) {
+              location.reload(); // Reload to refresh localData
+            } else {
+              alert('Error saving edit');
+            }
+          });
         }
         function cancelEdit(button) {
           var row = button.parentNode.parentNode;
@@ -833,21 +1080,41 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           editingRow = null;
           updateTable(section);
         }
-        function updateDate(section, index, value) {
-          localData[section][index].editableDate = value;
-          localData[section][index].lastUpdated = new Date().toISOString();
-        }
-        function addItem(section) {
+        function deleteRosterEntry(classId, rosterIndex) {
+	  if (confirm('Delete this roster entry?')) {
+	    const classIndex = localData.classes.findIndex(c => c._id === classId);
+	    if (classIndex !== -1) {
+	      const updatedRoster = [...localData.classes[classIndex].roster];
+	      updatedRoster.splice(rosterIndex, 1);
+	      const updateData = { roster: updatedRoster };
+	      fetch('/update-item', {
+	        method: 'POST',
+	        headers: { 'Content-Type': 'application/json' },
+	        body: JSON.stringify({ section: 'classes', id: classId, updateData })
+	      }).then(response => {
+	        if (response.ok) {
+	          localData.classes[classIndex].roster = updatedRoster;
+	          alert('Roster entry deleted!');
+	          location.reload(); // Or dynamically update table without reload if preferred
+	        } else {
+	          alert('Delete failed');
+	        }
+	      }).catch(err => {
+	        console.error('Error deleting roster entry:', err);
+	        alert('Error deleting');
+	      });
+	    }
+	  }
+	}
+	function addItem(section) {
           if (section === 'forms') {
             var title = document.getElementById('forms-title-add').value.trim();
             var content = document.getElementById('forms-content-add').value.trim();
-            var date = document.getElementById('forms-date-add').value;
             var fileInput = document.getElementById('forms-file-add');
-            if (title && content && date && fileInput.files[0]) {
+            if (title && content && fileInput.files[0]) {
               var formData = new FormData();
               formData.append('title', title);
               formData.append('content', content);
-              formData.append('editableDate', date);
               formData.append('formFile', fileInput.files[0]);
               fetch('/upload-form', {
                 method: 'POST',
@@ -857,7 +1124,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
                 updateTable('forms');
                 document.getElementById('forms-title-add').value = '';
                 document.getElementById('forms-content-add').value = '';
-                document.getElementById('forms-date-add').value = '';
                 fileInput.value = '';
               }).catch(err => alert('Error uploading form'));
               return;
@@ -865,35 +1131,66 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
               alert('All fields and file required for forms');
               return;
             }
+          } else if (section === 'classes') {
+            var titleInput = document.getElementById(section + '-title-add');
+            var contentInput = document.getElementById(section + '-content-add');
+            var activeInput = document.getElementById(section + '-active-add');
+            if (titleInput.value.trim() && contentInput.value.trim()) {
+              const newItem = {
+                title: titleInput.value.trim(),
+                content: contentInput.value.trim(),
+                lastUpdated: new Date().toISOString(),
+                active: activeInput.checked,
+                roster: []
+              };
+              fetch('/add-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ section, newItem })
+              }).then(response => {
+                if (response.ok) {
+                  location.reload();
+                } else {
+                  alert('Error adding item');
+                }
+              });
+            }
+            return;
           }
           // Original add for other sections
           var titleInput = document.getElementById(section + '-title-add');
           var contentInput = document.getElementById(section + '-content-add');
-          var dateInput = document.getElementById(section + '-date-add');
-          if (titleInput.value.trim() && contentInput.value.trim() && dateInput.value) {
-            localData[section].push({
+          if (titleInput.value.trim() && contentInput.value.trim()) {
+            const newItem = {
               title: titleInput.value.trim(),
               content: contentInput.value.trim(),
-              editableDate: dateInput.value,
               lastUpdated: new Date().toISOString()
-            });
-            titleInput.value = '';
-            contentInput.value = '';
-            dateInput.value = '';
-            updateTable(section);
-          }
-        }
-        function removeItem(section, index) {
-          const item = localData[section][index];
-          localData[section].splice(index, 1);
-          updateTable(section);
-          if (section === 'forms' && item.filename) {
-            fetch('/delete-file', {
+            };
+            fetch('/add-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename: item.filename })
+              body: JSON.stringify({ section, newItem })
+            }).then(response => {
+              if (response.ok) {
+                location.reload();
+              } else {
+                alert('Error adding item');
+              }
             });
           }
+        }
+        function removeItem(section, id) {
+          fetch('/delete-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section, id })
+          }).then(response => {
+            if (response.ok) {
+              location.reload();
+            } else {
+              alert('Error deleting item');
+            }
+          });
         }
         function updateAlertActive() {
           const enableTitle = document.getElementById('alert-enable-title').checked;
@@ -919,7 +1216,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           }
         }
         function saveData() {
-          localData.alert = {
+          const alertUpdate = {
             title: document.getElementById('alert-title').value.trim(),
             content: document.getElementById('alert-content').value.trim(),
             color: document.getElementById('alert-color').value,
@@ -928,10 +1225,10 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             enableContent: document.getElementById('alert-enable-content').checked,
             active: document.getElementById('alert-active').checked
           };
-          fetch('/save', {
+          fetch('/save-alert', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(localData)
+            body: JSON.stringify(alertUpdate)
           }).then(response => {
             if (response.ok) {
               alert('Changes saved!');
@@ -940,11 +1237,19 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             }
           });
         }
+        function showTab(tab) {
+          document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+          document.getElementById(tab + '-tab').classList.add('active');
+          const collapse = document.querySelector('.navbar-collapse');
+          if (collapse.classList.contains('show')) {
+            new bootstrap.Collapse(collapse).hide();
+          }
+        }
         // Initialize tables
         updateTable('news');
         updateTable('faq');
         updateTable('forms');
-        if (localData.classes) updateTable('classes');
+        updateTable('classes');
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl)
@@ -952,16 +1257,170 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         document.getElementById('alert-enable-title').addEventListener('change', updateAlertActive);
         document.getElementById('alert-enable-content').addEventListener('change', updateAlertActive);
         document.getElementById('alert-active').addEventListener('change', updateAlertActive);
-        updateAlertActive();
+        document.getElementById('copyright-year').textContent = new Date().getFullYear();
+	updateAlertActive();
       </script>
-    </body>
+        </body>
+	<footer>
+	 
+	</footer>
     </html>
   `;
-  res.send(html);
+    res.send(html);
+  } catch (err) {
+    console.error('Error rendering dashboard:', err);
+    res.status(500).send('Server error');
+  }
+});
+// Add item endpoint
+app.post('/add-item', isAuthenticated, async (req, res) => {
+  const { section, newItem } = req.body;
+  try {
+    let model;
+    switch (section) {
+      case 'news':
+        model = News;
+        break;
+      case 'faq':
+        model = Faq;
+        break;
+      case 'classes':
+        model = Class;
+        break;
+      default:
+        return res.status(400).send('Invalid section');
+    }
+    const created = await model.create(newItem);
+    console.log(`Added item to ${section}:`, created._id);
+    res.send('OK');
+  } catch (err) {
+    console.error('Error adding item:', err);
+    res.status(500).send('Error');
+  }
+});
+// Update item endpoint
+app.post('/update-item', isAuthenticated, async (req, res) => {
+  const { section, id, updateData } = req.body;
+  try {
+    let model;
+    switch (section) {
+      case 'news':
+        model = News;
+        break;
+      case 'faq':
+        model = Faq;
+        break;
+      case 'forms':
+        model = Form;
+        break;
+      case 'classes':
+        model = Class;
+        break;
+      default:
+        return res.status(400).send('Invalid section');
+    }
+    const updated = await model.findByIdAndUpdate(id, updateData, { new: true });
+    console.log(`Updated item in ${section}:`, id);
+    res.send('OK');
+  } catch (err) {
+    console.error('Error updating item:', err);
+    res.status(500).send('Error');
+  }
+});
+// Delete item endpoint
+app.post('/delete-item', isAuthenticated, async (req, res) => {
+  const { section, id } = req.body;
+  try {
+    let model;
+    switch (section) {
+      case 'news':
+        model = News;
+        break;
+      case 'faq':
+        model = Faq;
+        break;
+      case 'forms':
+  model = Form;
+  const form = await Form.findById(id);
+	  if (form && form.filename) {
+	    const filePath = path.join(__dirname, 'uploads/forms', form.filename);
+	    try {
+	      if (fs.existsSync(filePath)) {
+	        fs.unlinkSync(filePath);
+	        console.log('Deleted file:', form.filename);
+	      } else {
+	        console.log('File not found for deletion:', form.filename);
+	      }
+	    } catch (unlinkErr) {
+	      console.error('Error deleting file:', unlinkErr);    
+	    }
+        }
+        break;
+      case 'classes':
+        model = Class;
+        break;
+      default:
+        return res.status(400).send('Invalid section');
+    }
+    await model.findByIdAndDelete(id);
+    console.log(`Deleted item from ${section}:`, id);
+    res.send('OK');
+  } catch (err) {
+    console.error('Error deleting item:', err);
+    res.status(500).send('Error');
+  }
+});
+// Reorder endpoint (for drag-drop)
+app.post('/reorder', isAuthenticated, async (req, res) => {
+  const { section, order } = req.body;
+  try {
+    let model;
+    switch (section) {
+      case 'news':
+        model = News;
+        break;
+      case 'faq':
+        model = Faq;
+        break;
+      case 'forms':
+        model = Form;
+        break;
+      case 'classes':
+        model = Class;
+        break;
+      default:
+        return res.status(400).send('Invalid section');
+    }
+    // For simplicity, since no order field, we can add an order field to schema if needed, but for now assume client handles
+    // To properly reorder, add order: Number to schemas and update here
+    // For now, skip actual DB reorder as it's not persisted; client reloads anyway
+    res.send('OK');
+  } catch (err) {
+    console.error('Error reordering:', err);
+    res.status(500).send('Error');
+  }
+});
+// Save alert endpoint
+app.post('/save-alert', isAuthenticated, async (req, res) => {
+  try {
+    const update = req.body;
+    let alert = await Alert.findOne();
+    if (!alert) {
+      alert = new Alert(update);
+      await alert.save();
+    } else {
+      await Alert.updateOne({}, update);
+    }
+    console.log('Saved alert');
+    res.send('OK');
+  } catch (err) {
+    console.error('Error saving alert:', err);
+    res.status(500).send('Error');
+  }
 });
 // Upload form endpoint
 app.post('/upload-form', isAuthenticated, (req, res) => {
-  upload.single('formFile')(req, res, function (err) {
+  upload.single('formFile')(req, res, async function (err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -969,24 +1428,25 @@ app.post('/upload-form', isAuthenticated, (req, res) => {
       const newItem = {
         title: req.body.title,
         content: req.body.content,
-        editableDate: req.body.editableDate,
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date(),
         filename: req.file.filename
       };
-      data.forms.push(newItem);
-      fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-      res.json(newItem);
+      const created = await Form.create(newItem);
+      console.log('Uploaded form:', created._id);
+      res.json(created);
     } catch (e) {
+      console.error('Upload failed:', e);
       res.status(500).json({ error: 'Upload failed: ' + e.message });
     }
   });
 });
-// Delete file endpoint
+// Delete file endpoint (called in delete-item for forms)
 app.post('/delete-file', isAuthenticated, (req, res) => {
   const { filename } = req.body;
   const filePath = path.join(__dirname, 'uploads/forms', filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
+    console.log('Deleted file:', filename);
   }
   res.send('OK');
 });
@@ -994,24 +1454,42 @@ app.post('/delete-file', isAuthenticated, (req, res) => {
 app.get('/check-verified', (req, res) => {
   res.json({ verified: req.session.captchaVerified || req.session.authenticated });
 });
-// Verify CAPTCHA endpoint (client sends token, server verifies)
+// Verify CAPTCHA endpoint
 app.post('/verify-captcha', (req, res) => {
   const token = req.body.token;
-  const secret = '6LdrqpwrAAAAALl15L_kXI60l8IvkPgTlZtAOh_3'; // Replace with your secret key
+  const secret = '6LdrqpwrAAAAALl15L_kXI60l8IvkPgTlZtAOh_3'; // Replace with real
   fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`)
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        req.session.captchaVerified = true; // Set session flag
+        req.session.captchaVerified = true;
         res.send('OK');
       } else {
         res.status(400).send('CAPTCHA failed');
       }
     });
 });
+// Signup endpoint
+app.post('/signup', async (req, res) => {
+  const { firstName, lastName, email, classId } = req.body;
+  try {
+    const classItem = await Class.findById(classId);
+    if (classItem) {
+      classItem.roster.push({ firstName, lastName, email, date: new Date() });
+      await classItem.save();
+      console.log('Added signup to class:', classId);
+      res.send('OK');
+    } else {
+      res.status(404).send('Class not found');
+    }
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).send('Error');
+  }
+});
 // Send contact email
 app.post('/send-contact', upload.none(), async (req, res) => {
-  console.log('Received form data:', req.body); // Should now show populated data
+  console.log('Received form data:', req.body);
   const { firstName, lastName, email, phone, message } = req.body;
   if (!firstName || !lastName || !email || !phone) {
     console.log('Missing fields:', { firstName, lastName, email, phone });
@@ -1043,12 +1521,6 @@ app.post('/send-contact', upload.none(), async (req, res) => {
     res.status(500).send('Error sending email');
   }
 });
-// Save endpoint
-app.post('/save', isAuthenticated, (req, res) => {
-  data = req.body;
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-  res.send('OK');
-});
 // Logout
 app.get('/logout', (req, res) => {
   req.session.destroy();
@@ -1057,3 +1529,4 @@ app.get('/logout', (req, res) => {
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
+
