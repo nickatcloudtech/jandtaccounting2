@@ -14,11 +14,9 @@ const fs = require('fs');
 // MongoDB Connection with Logging
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  dbName: 'accounting-dashboard',
-  serverSelectionTimeoutMS: 30000 // Increase to 30s
+  useUnifiedTopology: true
 }).then(() => {
-  console.log('MongoDB connected successfully to accounting-dashboard');
+  console.log('MongoDB connected successfully');
 }).catch(err => {
   console.error('MongoDB connection error:', err);
 });
@@ -157,11 +155,7 @@ function isAuthenticated(req, res, next) {
 app.get('/', async (req, res) => {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-    const retry = require('async-retry');
-    const newsData = await retry(async () => await News.find().sort({ lastUpdated: -1 }), {
-  retries: 3,
-  minTimeout: 1000
-    });
+    const newsData = await News.find().sort({ lastUpdated: -1 });
     const faqData = await Faq.find().sort({ lastUpdated: -1 });
     const formsData = await Form.find().sort({ lastUpdated: -1 });
     const classesData = await Class.find().sort({ lastUpdated: -1 });
@@ -205,13 +199,11 @@ body { padding-top: 70px; }
         .section.active { display: block; }
         .btn { border-radius: 20px; font-weight: 600; }
         h2 { font-weight: 700; color: #001f3f; }
-        .consultation-container { padding-bottom: 4rem; } /* Added padding to prevent alert overlap */
 @media (max-width: 576px) {
   .card-body { padding: 1rem; font-size: 1rem; }
   .hero h1 { font-size: 2rem; }
   .description { font-size: 1rem; padding: 1rem 0; }
   .btn { font-size: 1rem; }
-  .consultation-container { padding-bottom: 6rem; } /* Increased padding for mobile */
 }
 @media (max-width: 991px) {
   .navbar-collapse {
@@ -262,6 +254,9 @@ body { padding-top: 70px; }
   <h2 style="color: white; font-weight: 400; font-size: 1.5rem; margin: 0; text-align: center;">Supporting you & your growing business.</h2>
 </div>
         <img style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: 2rem auto;" src="/images/US.jpg" alt="Team Photo">
+        <div class="text-center mb-4">
+          <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
+        </div>
         <div class="description">
           J & T Accounting provides financial guidance for businesses through planning and ongoing advisement. We also support individuals with personal accounting and tax needs. Our approach is focused on establishing relationships with our clients, so we have a vested interest in helping them achieve their strategic goals.
         </div>
@@ -269,9 +264,6 @@ body { padding-top: 70px; }
           <i class="bi bi-briefcase-fill icon"></i>
           <i class="bi bi-file-earmark-text-fill icon"></i>
           <i class="bi bi-graph-up-arrow icon"></i>
-        </div>
-        <div class="text-center mb-4 consultation-container">
-          <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
  ${alertData.active && alertData.orientation === 'bottom' ? `<div class="alert alert-${alertData.color}" role="alert" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1020;">
           ${alertData.enableTitle ? `<h4 class="alert-heading">${alertData.title}</h4>` : ''}
@@ -405,7 +397,7 @@ body { padding-top: 70px; }
         <p>See how our accounting expertise and personalized services can save you time, money, and frustration with managing your finances. We offer both free introductary consultations and fee based analysis and on going advice.</p>
         <p>Please call or use the form below to set up an appointment.</p>
         <div class="alert alert-info mb-4" role="alert">
-          <p><strong>Mailing Address</strong></p>
+          <p><p><strong>Mailing Address</strong></p>
           <p>HC 74 Box 5110</p>
           <p>Adamsville, UT 84731-5116</p>
           <p>If you are sending us information via UPS or FedEx, please contact us for an alternative address.</p>
@@ -559,7 +551,7 @@ body { padding-top: 70px; }
        function showSection(sectionId) {
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
   document.getElementById(sectionId).classList.add('active');
-  // Close navbar collapse on mobile after click
+  // New: Close navbar collapse on mobile after click
   const collapse = document.querySelector('.navbar-collapse');
   if (collapse.classList.contains('show')) {
     new bootstrap.Collapse(collapse).hide();
@@ -581,13 +573,11 @@ body { padding-top: 70px; }
   } else {
     const errorText = await response.text(); // Get the server's error message
     console.error('Form submission error:', errorText); // Log to browser console for debugging
-    alert('Error sending message: ' + errorText); // Show detailed alert
+    alert('Error sending message: ' + errorText); // Show detailed alert (using single quotes as you tried)
   }
 });
 document.getElementById('copyright-year').textContent = new Date().getFullYear();
       </script>
-     <footer>
-</footer>
 </body>
     </html>
   `;
@@ -701,48 +691,15 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         tbody tr:hover { cursor: grab; background-color: #e9ecef; }
         .editing input { width: 100%; }
         h1, h2 { color: #001f3f; font-weight: 700; }
-        .bi { font-weight: bold; font-size: 1.2rem; } /* Bold icons */
-        .dimmed { opacity: 0.5; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        /* Improved navbar mobile responsiveness */
-        @media (max-width: 991px) {
-          .navbar-collapse {
-            position: relative;
-            height: auto !important;
-            background-color: #001f3f;
-            padding: 1rem;
-          }
-          .navbar-nav {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          .nav-item {
-            width: 100%;
-          }
-          .nav-link {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            width: 100%;
-            text-align: left;
-          }
-          .nav-link:hover {
-            background-color: #003087;
-            border-radius: 5px;
-          }
-        }
-        @media (max-width: 576px) {
-          .navbar-brand {
-            font-size: 1.2rem;
-          }
-          .navbar-toggler {
-            padding: 0.25rem 0.5rem;
-          }
-          .nav-link {
-            font-size: 0.9rem;
-            padding: 0.4rem 0.8rem;
-          }
-        }
+        .bi { font-weight: bold; font-size: 1.2rem; } // Bold icons
+@media (max-width: 576px) {
+  .form-control { font-size: 1rem; }
+  .btn-sm { font-size: 0.875rem; }
+  h2 { font-size: 1.5rem; }
+}
+.dimmed { opacity: 0.5; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
       </style>
     </head>
     <body>
@@ -929,6 +886,11 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
                           `).join('')}
                         </tbody>
                       </table>
+                      <div class="d-flex justify-content-end mt-2">
+                        <button class="btn btn-secondary btn-sm me-2" title="Copy emails to clipboard" onclick="copyEmails('${c._id}')"><i class="bi bi-envelope"></i></button>
+                        <button class="btn btn-secondary btn-sm me-2" title="Copy roster to clipboard" onclick="copyRoster('${c._id}')"><i class="bi bi-clipboard"></i></button>
+                        <button class="btn btn-secondary btn-sm" title="Export roster to CSV" onclick="exportToCSV('${c._id}', '${c.title.replace(/"/g, '\\"')}')"><i class="bi bi-download"></i></button>
+                      </div>
                     ` : '<p>No signups yet.</p>'}
                   </div>
                 </div>
@@ -944,7 +906,6 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
         <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         var initialData = {
           news: ${JSON.stringify(newsData)},
@@ -1275,6 +1236,39 @@ function addItem(section) {
             new bootstrap.Collapse(collapse).hide();
           }
         }
+function copyEmails(classId) {
+  const cls = localData.classes.find(c => c._id === classId);
+  if (cls && cls.roster.length > 0) {
+    const emails = cls.roster.map(r => r.email).join('; ');
+    navigator.clipboard.writeText(emails).then(() => alert('Emails copied to clipboard!')).catch(() => alert('Failed to copy'));
+  } else {
+    alert('No roster entries');
+  }
+}
+function copyRoster(classId) {
+  const cls = localData.classes.find(c => c._id === classId);
+  if (cls && cls.roster.length > 0) {
+    const tsv = ['First Name\tLast Name\tEmail\tSignup Date'].concat(cls.roster.map(r => \`\${r.firstName}\t\${r.lastName}\t\${r.email}\t\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.date))}\`)).join('\\n');
+    navigator.clipboard.writeText(tsv).then(() => alert('Roster copied to clipboard as TSV!')).catch(() => alert('Failed to copy'));
+  } else {
+    alert('No roster entries');
+  }
+}
+function exportToCSV(classId, title) {
+  const cls = localData.classes.find(c => c._id === classId);
+  if (cls && cls.roster.length > 0) {
+    const csv = ['First Name,Last Name,Email,Signup Date'].concat(cls.roster.map(r => \`"\${r.firstName}","\${r.lastName}","\${r.email}","\${new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.date))}"\`)).join('\\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = \`\${title}.csv\`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } else {
+    alert('No roster entries');
+  }
+}
         // Initialize tables
         updateTable('news');
         updateTable('faq');
@@ -1291,8 +1285,6 @@ function addItem(section) {
 updateAlertActive();
       </script>
         </body>
-<footer>
-</footer>
     </html>
   `;
     res.send(html);
