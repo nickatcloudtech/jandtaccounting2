@@ -11,23 +11,20 @@ const nodemailer = require('nodemailer');
 const mongoose = require('mongoose');
 const app = express();
 const fs = require('fs');
-
 // MongoDB Connection with Logging
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   dbName: 'accounting-dashboard',
-  serverSelectionTimeoutMS: 30000  // Increase to 30s
+  serverSelectionTimeoutMS: 30000 // Increase to 30s
 }).then(() => {
   console.log('MongoDB connected successfully to accounting-dashboard');
 }).catch(err => {
   console.error('MongoDB connection error:', err);
 });
-
 mongoose.connection.on('error', err => {
   console.error('MongoDB error:', err);
 });
-
 // Define Schemas
 const AlertSchema = new mongoose.Schema({
   title: String,
@@ -39,21 +36,18 @@ const AlertSchema = new mongoose.Schema({
   enableContent: Boolean
 });
 const Alert = mongoose.model('Alert', AlertSchema, 'alerts');
-
 const NewsSchema = new mongoose.Schema({
   title: String,
   content: String,
   lastUpdated: Date
 });
 const News = mongoose.model('News', NewsSchema, 'news');
-
 const FaqSchema = new mongoose.Schema({
   title: String,
   content: String,
   lastUpdated: Date
 });
 const Faq = mongoose.model('Faq', FaqSchema, 'faqs');
-
 const FormSchema = new mongoose.Schema({
   title: String,
   content: String,
@@ -61,7 +55,6 @@ const FormSchema = new mongoose.Schema({
   filename: String
 });
 const Form = mongoose.model('Form', FormSchema, 'forms');
-
 const ClassSchema = new mongoose.Schema({
   title: String,
   content: String,
@@ -75,7 +68,6 @@ const ClassSchema = new mongoose.Schema({
   }]
 });
 const Class = mongoose.model('Class', ClassSchema, 'classes');
-
 // Initialize Default Data if Collections are Empty
 (async () => {
   try {
@@ -102,7 +94,6 @@ const Class = mongoose.model('Class', ClassSchema, 'classes');
     console.error('Error initializing defaults:', err);
   }
 })();
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(session({ secret: process.env.SESSION_SECRET || 'secret-key', resave: false, saveUninitialized: true }));
@@ -155,7 +146,6 @@ app.use('/forms', (req, res, next) => {
   }
 });
 app.use('/images', express.static('images'));
-
 // Authentication middleware
 function isAuthenticated(req, res, next) {
   if (req.session.authenticated) {
@@ -169,9 +159,9 @@ app.get('/', async (req, res) => {
     const formatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
     const retry = require('async-retry');
     const newsData = await retry(async () => await News.find().sort({ lastUpdated: -1 }), {
-	  retries: 3,
-	  minTimeout: 1000
-  	 });
+  retries: 3,
+  minTimeout: 1000
+    });
     const faqData = await Faq.find().sort({ lastUpdated: -1 });
     const formsData = await Form.find().sort({ lastUpdated: -1 });
     const classesData = await Class.find().sort({ lastUpdated: -1 });
@@ -181,7 +171,6 @@ app.get('/', async (req, res) => {
     console.log('Retrieved forms:', formsData.length);
     console.log('Retrieved classes:', classesData.length);
     console.log('Retrieved alert:', alertData ? 'Yes' : 'No');
-
     let html = `
     <!DOCTYPE html>
     <html lang="en">
@@ -216,11 +205,13 @@ body { padding-top: 70px; }
         .section.active { display: block; }
         .btn { border-radius: 20px; font-weight: 600; }
         h2 { font-weight: 700; color: #001f3f; }
+        .consultation-container { padding-bottom: 4rem; } /* Added padding to prevent alert overlap */
 @media (max-width: 576px) {
   .card-body { padding: 1rem; font-size: 1rem; }
   .hero h1 { font-size: 2rem; }
   .description { font-size: 1rem; padding: 1rem 0; }
   .btn { font-size: 1rem; }
+  .consultation-container { padding-bottom: 6rem; } /* Increased padding for mobile */
 }
 @media (max-width: 991px) {
   .navbar-collapse {
@@ -279,7 +270,7 @@ body { padding-top: 70px; }
           <i class="bi bi-file-earmark-text-fill icon"></i>
           <i class="bi bi-graph-up-arrow icon"></i>
         </div>
-        <div class="text-center mb-4">
+        <div class="text-center mb-4 consultation-container">
           <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
  ${alertData.active && alertData.orientation === 'bottom' ? `<div class="alert alert-${alertData.color}" role="alert" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1020;">
@@ -568,7 +559,7 @@ body { padding-top: 70px; }
        function showSection(sectionId) {
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
   document.getElementById(sectionId).classList.add('active');
-  // New: Close navbar collapse on mobile after click
+  // Close navbar collapse on mobile after click
   const collapse = document.querySelector('.navbar-collapse');
   if (collapse.classList.contains('show')) {
     new bootstrap.Collapse(collapse).hide();
@@ -590,14 +581,14 @@ body { padding-top: 70px; }
   } else {
     const errorText = await response.text(); // Get the server's error message
     console.error('Form submission error:', errorText); // Log to browser console for debugging
-    alert('Error sending message: ' + errorText); // Show detailed alert (using single quotes as you tried)
+    alert('Error sending message: ' + errorText); // Show detailed alert
   }
 });
 document.getElementById('copyright-year').textContent = new Date().getFullYear();
       </script>
-    	<footer>
-	</footer>
-	</body>
+     <footer>
+</footer>
+</body>
     </html>
   `;
     res.send(html);
@@ -622,8 +613,8 @@ app.get('/schwertfisch', (req, res) => {
         .btn-primary { background-color: #8fb98b; border-color: #8fb98b; border-radius: 20px; font-weight: 600; color: white; }
         .btn-primary:hover { background-color: #79a076; }
         h1 { color: #001f3f; font-weight: 700; }
-	footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #6c757d; font-style: italic; }
-	footer a { color: #6c757d; text-decoration: underline; }
+footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #6c757d; font-style: italic; }
+footer a { color: #6c757d; text-decoration: underline; }
       </style>
     </head>
     <body class="container mt-4">
@@ -687,7 +678,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     console.log('Retrieved forms for dashboard:', formsData.length);
     console.log('Retrieved classes for dashboard:', classesData.length);
     console.log('Retrieved alert for dashboard:', alertData ? 'Yes' : 'No');
-
     let html = `
     <!DOCTYPE html>
     <html lang="en">
@@ -711,15 +701,48 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         tbody tr:hover { cursor: grab; background-color: #e9ecef; }
         .editing input { width: 100%; }
         h1, h2 { color: #001f3f; font-weight: 700; }
-        .bi { font-weight: bold; font-size: 1.2rem; } // Bold icons
-@media (max-width: 576px) {
-  .form-control { font-size: 1rem; }
-  .btn-sm { font-size: 0.875rem; }
-  h2 { font-size: 1.5rem; }
-}
-.dimmed { opacity: 0.5; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+        .bi { font-weight: bold; font-size: 1.2rem; } /* Bold icons */
+        .dimmed { opacity: 0.5; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Improved navbar mobile responsiveness */
+        @media (max-width: 991px) {
+          .navbar-collapse {
+            position: relative;
+            height: auto !important;
+            background-color: #001f3f;
+            padding: 1rem;
+          }
+          .navbar-nav {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .nav-item {
+            width: 100%;
+          }
+          .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            width: 100%;
+            text-align: left;
+          }
+          .nav-link:hover {
+            background-color: #003087;
+            border-radius: 5px;
+          }
+        }
+        @media (max-width: 576px) {
+          .navbar-brand {
+            font-size: 1.2rem;
+          }
+          .navbar-toggler {
+            padding: 0.25rem 0.5rem;
+          }
+          .nav-link {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.8rem;
+          }
+        }
       </style>
     </head>
     <body>
@@ -891,8 +914,8 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
                             <th>Last Name</th>
                             <th>Email</th>
                             <th>Signup Date</th>
-                            <th>Actions</th> 
-			 </tr>
+                            <th>Actions</th>
+ </tr>
                         </thead>
                         <tbody>
                           ${c.roster.map((r, index) => `
@@ -901,8 +924,8 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
                               <td>${r.lastName}</td>
                               <td>${r.email}</td>
                               <td>${formatter.format(new Date(r.date))}</td>
-                              <td><button class="btn btn-danger btn-sm" onclick="deleteRosterEntry('${c._id}', ${index})"><i class="bi bi-trash"></i></button></td>  
-			  </tr>
+                              <td><button class="btn btn-danger btn-sm" onclick="deleteRosterEntry('${c._id}', ${index})"><i class="bi bi-trash"></i></button></td>
+  </tr>
                           `).join('')}
                         </tbody>
                       </table>
@@ -921,6 +944,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
         <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         var initialData = {
           news: ${JSON.stringify(newsData)},
@@ -1087,32 +1111,32 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           updateTable(section);
         }
         function deleteRosterEntry(classId, rosterIndex) {
-	  if (confirm('Delete this roster entry?')) {
-	    const classIndex = localData.classes.findIndex(c => c._id === classId);
-	    if (classIndex !== -1) {
-	      const updatedRoster = [...localData.classes[classIndex].roster];
-	      updatedRoster.splice(rosterIndex, 1);
-	      const updateData = { roster: updatedRoster };
-	      fetch('/update-item', {
-	        method: 'POST',
-	        headers: { 'Content-Type': 'application/json' },
-	        body: JSON.stringify({ section: 'classes', id: classId, updateData })
-	      }).then(response => {
-	        if (response.ok) {
-	          localData.classes[classIndex].roster = updatedRoster;
-	          alert('Roster entry deleted!');
-	          location.reload(); // Or dynamically update table without reload if preferred
-	        } else {
-	          alert('Delete failed');
-	        }
-	      }).catch(err => {
-	        console.error('Error deleting roster entry:', err);
-	        alert('Error deleting');
-	      });
-	    }
-	  }
-	}
-	function addItem(section) {
+  if (confirm('Delete this roster entry?')) {
+    const classIndex = localData.classes.findIndex(c => c._id === classId);
+    if (classIndex !== -1) {
+      const updatedRoster = [...localData.classes[classIndex].roster];
+      updatedRoster.splice(rosterIndex, 1);
+      const updateData = { roster: updatedRoster };
+      fetch('/update-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: 'classes', id: classId, updateData })
+      }).then(response => {
+        if (response.ok) {
+          localData.classes[classIndex].roster = updatedRoster;
+          alert('Roster entry deleted!');
+          location.reload(); // Or dynamically update table without reload if preferred
+        } else {
+          alert('Delete failed');
+        }
+      }).catch(err => {
+        console.error('Error deleting roster entry:', err);
+        alert('Error deleting');
+      });
+    }
+  }
+}
+function addItem(section) {
           if (section === 'forms') {
             var title = document.getElementById('forms-title-add').value.trim();
             var content = document.getElementById('forms-content-add').value.trim();
@@ -1264,12 +1288,11 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         document.getElementById('alert-enable-content').addEventListener('change', updateAlertActive);
         document.getElementById('alert-active').addEventListener('change', updateAlertActive);
         document.getElementById('copyright-year').textContent = new Date().getFullYear();
-	updateAlertActive();
+updateAlertActive();
       </script>
         </body>
-	<footer>
-	 
-	</footer>
+<footer>
+</footer>
     </html>
   `;
     res.send(html);
@@ -1348,18 +1371,18 @@ app.post('/delete-item', isAuthenticated, async (req, res) => {
       case 'forms':
   model = Form;
   const form = await Form.findById(id);
-	  if (form && form.filename) {
-	    const filePath = path.join(__dirname, 'uploads/forms', form.filename);
-	    try {
-	      if (fs.existsSync(filePath)) {
-	        fs.unlinkSync(filePath);
-	        console.log('Deleted file:', form.filename);
-	      } else {
-	        console.log('File not found for deletion:', form.filename);
-	      }
-	    } catch (unlinkErr) {
-	      console.error('Error deleting file:', unlinkErr);    
-	    }
+  if (form && form.filename) {
+    const filePath = path.join(__dirname, 'uploads/forms', form.filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log('Deleted file:', form.filename);
+      } else {
+        console.log('File not found for deletion:', form.filename);
+      }
+    } catch (unlinkErr) {
+      console.error('Error deleting file:', unlinkErr);
+    }
         }
         break;
       case 'classes':
@@ -1535,4 +1558,3 @@ app.get('/logout', (req, res) => {
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
-
