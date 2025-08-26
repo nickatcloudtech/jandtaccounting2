@@ -322,10 +322,10 @@ body { padding-top: 70px; }
           ${classesData ? classesData.map(c => `
             <div class="col-12 mb-3">
               <div class="card">
-                <div class="card-header"><strong>${c.title}</strong></div>
+                <div class="card-header" style="background-color: #001f3f; color: white;"><strong>${c.title}</strong></div>
                 <div class="card-body">
                   ${c.content}
-                  ${c.active ? `<button class="btn btn-primary btn-sm mt-2" onclick="openSignupModal('${c._id}')">Sign Up</button>` : ''}
+                  ${c.active ? `<div class="mt-3"><button class="btn btn-primary btn-sm" onclick="openSignupModal('${c._id}')">Sign Up</button></div>` : ''}
                 </div>
                 <div class="card-footer text-muted">
                   <small><i><strong>Last Updated: <span class="local-datetime" data-iso="${c.lastUpdated}">${formatter.format(new Date(c.lastUpdated))}</span></strong></i></small>
@@ -700,6 +700,13 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
 .dimmed { opacity: 0.5; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
+@media (max-width: 991px) {
+  .navbar-collapse {
+    position: relative;
+    height: auto !important;
+    background-color: #001f3f; /* Matches navbar bg for consistency */
+  }
+}
       </style>
     </head>
     <body>
@@ -858,10 +865,10 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
           </div>
           <h2>Rosters</h2>
           <div class="row">
-            ${classesData.filter(c => c.active).map(c => `
+            ${classesData.map(c => `
               <div class="col-12 mb-3">
                 <div class="card">
-                  <div class="card-header"><strong>Roster for ${c.title}</strong></div>
+                  <div class="card-header" style="background-color: ${c.active ? '#28a745' : '#dc3545'}; color: white;"><strong>Roster for ${c.title}</strong></div>
                   <div class="card-body">
                     ${c.roster.length > 0 ? `
                       <table class="table table-striped">
@@ -906,6 +913,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         <a href="/" class="btn btn-secondary mt-3"><i class="bi bi-arrow-left-circle"></i> Go to Main</a>
         <a href="/logout" class="btn btn-danger mt-3"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script>
         var initialData = {
           news: ${JSON.stringify(newsData)},
@@ -1059,6 +1067,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
             body: JSON.stringify({ section, id, updateData })
           }).then(response => {
             if (response.ok) {
+              localStorage.setItem('savedTab', document.querySelector('.tab-content.active').id.replace('-tab', ''));
               location.reload(); // Reload to refresh localData
             } else {
               alert('Error saving edit');
@@ -1086,6 +1095,7 @@ body { font-family: 'Open Sans', sans-serif; background-color: #f8f9fa; color: #
         if (response.ok) {
           localData.classes[classIndex].roster = updatedRoster;
           alert('Roster entry deleted!');
+          localStorage.setItem('savedTab', 'classes');
           location.reload(); // Or dynamically update table without reload if preferred
         } else {
           alert('Delete failed');
@@ -1140,6 +1150,7 @@ function addItem(section) {
                 body: JSON.stringify({ section, newItem })
               }).then(response => {
                 if (response.ok) {
+                  localStorage.setItem('savedTab', 'classes');
                   location.reload();
                 } else {
                   alert('Error adding item');
@@ -1163,6 +1174,7 @@ function addItem(section) {
               body: JSON.stringify({ section, newItem })
             }).then(response => {
               if (response.ok) {
+                localStorage.setItem('savedTab', 'sections');
                 location.reload();
               } else {
                 alert('Error adding item');
@@ -1177,6 +1189,7 @@ function addItem(section) {
             body: JSON.stringify({ section, id })
           }).then(response => {
             if (response.ok) {
+              localStorage.setItem('savedTab', document.querySelector('.tab-content.active').id.replace('-tab', ''));
               location.reload();
             } else {
               alert('Error deleting item');
@@ -1283,6 +1296,11 @@ function exportToCSV(classId, title) {
         document.getElementById('alert-active').addEventListener('change', updateAlertActive);
         document.getElementById('copyright-year').textContent = new Date().getFullYear();
 updateAlertActive();
+        const savedTab = localStorage.getItem('savedTab');
+        if (savedTab) {
+          showTab(savedTab);
+          localStorage.removeItem('savedTab');
+        }
       </script>
         </body>
     </html>
