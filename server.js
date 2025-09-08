@@ -249,11 +249,11 @@ body { padding-top: 70px; }
           ${alertData.enableContent ? `<p class="mb-0">${alertData.content}</p>` : ''}
         </div>` : ''}
  <div class="hero">
-  <img src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
+  <img style="margin: 10px auto 0 auto;" src="/images/AccountingServices-R2.png" alt="Logo" class="hero-logo">
   <h1 style="color: white; font-weight: 700; font-size: 3rem; margin: 0 0 0.5rem 0; text-align: center;">J&T Accounting Services</h1>
   <h2 style="color: white; font-weight: 400; font-size: 1.5rem; margin: 0; text-align: center;">Supporting you & your growing business.</h2>
 </div>
-        <img style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: 2rem auto;" src="/images/US.jpg" alt="Team Photo">
+<img style="width: 320px; height: 320px; border-radius: 10px; display: block; margin: 40px auto 40px auto;" src="/images/US.jpg" alt="Tiffiny and James">
         <div class="text-center mb-4">
           <button class="btn btn-contact" onclick="showSection('contact')">Schedule a Free Consultation</button>
         </div>
@@ -272,13 +272,18 @@ body { padding-top: 70px; }
         </div>` : ''}
       </div>
       <div id="about" class="section container mt-4">
-        <h2>About</h2>
-        <p>Hello, we're James Beltrame and Tiffiny Trupe, proud owners of J&T Accounting Services, LLC.</p>
-<p>James brings over 25 years in the custom home industry as a master tradesman and project manager. During the Great Recession, he leveraged his business degree, completed an H&R Block course, and became a tax preparer. He balanced six tax seasons at Block with his construction work—until our paths crossed.</p>
-<p>We met in 2016 at an H&R Block orientation, collaborating occasionally in the same office. By season's end, we launched our own practice from home, building a loyal clientele. In 2017, we opened an office and grew steadily until COVID prompted a shift to remote work. With today's technology, we deliver the same personalized service without in-person meetings. This evolution led us to relocate our practice to Utah, where we now call home. As an IRS Enrolled Agent (EA), James represents taxpayers nationwide across all 50 states.</p>
-<p>As for me, Tiffiny, I'm a mom to two amazing boys. I paused my accounting career to raise them and volunteer endlessly at their schools—it felt like I lived there! After my divorce, re-entering the workforce after 13 years was tough; no recent experience meant constant rejections. Spotting an H&R Block class, I thought, "What do I have to lose?" I passed but, due to a management mix-up, started as a Client Service Professional across two offices—where I met James. We connected weekly, and the rest is history. I believe things happen for a reason: that detour let me observe and refine my approach. I'm not one for multitasking chit-chat while crunching numbers—I thrive on focus.</p>
-<p>Together, we're a seamless team. I prepare every return; James reviews and we collaborate on solutions. We double-check everything, with James leading on corporate filings and IRS matters. We both love guiding businesses and cheering on our clients' success—because when they thrive, so do we!</p>
-      </div>
+        <h2>About J&T Accounting Services</h2>
+          <img style="width: 500px; height: 500px; border-radius: 10px; display: block; margin: 50px auto 50px auto;" src="/images/US.jpg" alt="Tiffiny and James">
+	        <p>Hello, we're James Beltrame and Tiffiny Trupe, proud owners of J&T Accounting Services, LLC.</p>
+		<p>James brings over 25 years in the custom home industry as a master tradesman and project manager. During the Great Recession, he leveraged his business degree, completed an H&R Block course, and became a tax preparer. He balanced six tax seasons at Block with his construction work—until our paths crossed.</p>
+		<p>We met in 2016 at an H&R Block orientation, collaborating occasionally in the same office. By season's end, we launched our own practice from home, building a loyal clientele. In 2017, we opened an office and grew steadily until COVID prompted a shift to remote work. With today's technology, we deliver the same personalized service without in-person meetings. This evolution led us to relocate our practice to Utah, where we now call home. As an IRS Enrolled Agent (EA), James represents taxpayers nationwide across all 50 states.</p>
+		<p>As for me, Tiffiny, I'm a mom to two amazing boys. I paused my accounting career to raise them and volunteer endlessly at their schools—it felt like I lived there! After my divorce, re-entering the workforce after 13 years was tough; no recent experience meant constant rejections. Spotting an H&R Block class, I thought, "What do I have to lose?" I passed but, due to a management mix-up, started as a Client Service Professional across two offices—where I met James. We connected weekly, and the rest is history. I believe things happen for a reason: that detour let me observe and refine my approach. I'm not one for multitasking chit-chat while crunching numbers—I thrive on focus.</p>
+		<p>Together, we're a seamless team. I prepare every return; James reviews and we collaborate on solutions. We double-check everything, with James leading on corporate filings and IRS matters. We both love guiding businesses and cheering on our clients' success—because when they thrive, so do we!</p>
+
+	<div class="text-center mb-4">
+          <button class="btn btn-contact" onclick="showSection('contact')">Contact Us Today!</button>
+        </div>
+	</div>
       <div id="services" class="section container mt-4">
         <h2>Services</h2>
         <div class="row">
@@ -402,9 +407,9 @@ body { padding-top: 70px; }
           <p>Adamsville, UT 84731-5116</p>
           <p>If you are sending us information via UPS or FedEx, please contact us for an alternative address.</p>
         </div>
-        <p class="mb-4">Please call for a consult or virtual appointment</p>
-        <p class="mb-4">help@jandtaccounting.com</p>
-        <p class="mb-4">951-409-3081</p>
+        <p class="mb-4"><a href="https://calendly.com/jandtaccounting/30min" target="_blank">Schedule an Initial 30-Minute Consultation with us</a></a></p>
+        <p class="mb-4">Email Us: <b><a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></b></p>
+        <p class="mb-4">Call Us: <b>951-409-3081</b></p>
         <div class="container mt-4">
           <form id="contact-form">
             <div class="mb-3">
@@ -442,10 +447,16 @@ body { padding-top: 70px; }
           <p><strong>Mailing Address:</strong> HC 74 Box 5110, Adamsville, UT 84731-5116</p>
           <p>If you are sending us information via UPS or FedEx, please contact us for an alternative address.</p>
         </div>
-        <p class="mb-4">Email: <a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></p>
-        <p class="mb-4">Phone: 951-409-3081</p>
-        <p><a href="https://your-taxdome-url.com" target="_blank">Access Your TaxDome Site (Placeholder)</a></p>
-      </div>
+        <p class="mb-4">Email Us: <b><a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></b></p>
+        <p class="mb-4">Call Us: <b>951-409-3081</b></p>
+        <p class="mb-4"><a href="https://jtaccountingservicesllc.taxdome.com/" target="_blank">J&amp;T Accounting Services TaxDome Site</a></p>
+	<h4>For Monthly Bookkeeping and CFO Advisory Clients</h4>
+	<p class="mb-4"><a href="https://calendly.com/jandtaccounting/1-hour-periodic-meeting-video-call" target="_blank">Schedule a 1-Hour Periodic Meeting (Video Call)</a></p>
+   	<h4>For Tax Clients Who Would Like a Meeting by Phone</h4>
+	<p class="mb-4"><a href="https://calendly.com/jandtaccounting/30-minute-tax-meeting-phone" target="_blank">Schedule a 30-Minute Tax Meeting (Phone)</a></p>
+	<h4>For Tax Clients Who Would Like a Meeting by Google Meet</h4>
+	<p class="mb-4"><a href="https://calendly.com/jandtaccounting/30-minute-tax-meeting-video-call" target="_blank">Schedule a 30-Minute Tax Meeting (Google Meet)</a></p>
+	</div>
       <!-- CAPTCHA Modal -->
       <div class="modal fade" id="captchaModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
