@@ -235,7 +235,7 @@ body { padding-top: 70px; }
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('news')">News</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('faq')">FAQ</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('contact')">Contact</a></li>
-              <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('irs')">IRS</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('links')">Links</a></li>
               <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('existingclients')">Existing Clients</a></li>
               <li class="nav-item"><button class="btn btn-contact ms-2" onclick="showSection('contact')">Free Consultation</button></li>
             </ul>
@@ -436,10 +436,37 @@ body { padding-top: 70px; }
           </form>
         </div>
       </div>
-      <div id="irs" class="section container mt-4">
-        <h2>IRS</h2>
-        <p>IRS Website: <a href="https://www.irs.gov">https://www.irs.gov/</a></p>
-      </div>
+     <div id="links" class="section container mt-4">
+  <h2>Links</h2>
+  <ul class="list-group list-group-flush">
+    <li class="list-group-item">
+      <strong>Internal Revenue Service</strong> (To make any federal tax payments or inquiries)<br>
+      <a href="https://www.irs.gov" target="_blank">www.irs.gov</a>
+    </li>
+    <li class="list-group-item">
+      <strong>California Franchise Tax Board</strong> (To make any California State tax payments or inquiries)<br>
+      <a href="https://www.ftb.ca.gov" target="_blank">www.ftb.ca.gov</a>
+    </li>
+    <li class="list-group-item">
+      <strong>Arizona Department of Revenue</strong> (For all Arizona tax issues and payments)<br>
+      <a href="https://azdor.gov/" target="_blank">https://azdor.gov/</a>
+    </li>
+    <li class="list-group-item">
+      <strong>Referral for Financial Planners and Advisors</strong> (Retirement and Investment Planning)<br>
+      Steve Antinucci<br>
+      On Point Wealth Management<br>
+      909-797-2000<br>
+      <a href="mailto:Steve@onpointwealth.com">Steve@onpointwealth.com</a>
+    </li>
+    <li class="list-group-item">
+      <strong>Referral for Court ordered Forensic Accounting, Business Valuations, and Estate Fiduciary Services</strong><br>
+      Dennis Shogren<br>
+      Shogren and Associates<br>
+      951-462-1406<br>
+      <a href="mailto:Dennis@shogrenandassociates.com">Dennis@shogrenandassociates.com</a>
+    </li>
+  </ul>
+</div>
       <div id="existingclients" class="section container mt-4">
         <h2>Existing Clients</h2>
         <p>Thanks for being a loyal customer.</p>
@@ -449,6 +476,7 @@ body { padding-top: 70px; }
         </div>
         <p class="mb-4">Email Us: <b><a href="mailto:help@jandtaccounting.com">help@jandtaccounting.com</a></b></p>
         <p class="mb-4">Call Us: <b>951-409-3081</b></p>
+	<h3>Log in to your Tax Dome account here</h3>
         <p class="mb-4"><a href="https://jtaccountingservicesllc.taxdome.com/" target="_blank">J&amp;T Accounting Services TaxDome Site</a></p>
 	<h4>For Monthly Bookkeeping and CFO Advisory Clients</h4>
 	<p class="mb-4"><a href="https://calendly.com/jandtaccounting/1-hour-periodic-meeting-video-call" target="_blank">Schedule a 1-Hour Periodic Meeting (Video Call)</a></p>
